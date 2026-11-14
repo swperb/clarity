@@ -1,7 +1,8 @@
 {
   "name": "clarity",
   "owner": {
-    "name": "swperb"
+    "name": "swperb",
+    "url": "https://github.com/swperb"
   },
   "plugins": [
     {
@@ -24,5 +25,6 @@
       "source": "./plugins/studio",
       "description": "A soft IDE beside the chat: the session folder's file tree, a live viewer that follows what Claude reads, edits, searches and runs, and an activity strip."
     }
-  ]
+  ],
+  "description": "Clarity for Claude Code: a calm, high-legibility theme plus plugins for attention, safety, multi-session control and a live IDE pane."
 }

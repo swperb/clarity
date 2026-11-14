@@ -5,7 +5,7 @@ needs you, then says so plainly. It pairs with the [Clarity](../../themes/clarit
 but works with any theme.
 
 ```
-/plugin install workbench --marketplace swperb/claude-code-themes
+/plugin install workbench --marketplace swperb/clarity
 ```
 
 ## What you get

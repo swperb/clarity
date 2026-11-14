@@ -138,6 +138,46 @@ function confirm(question) {
 
 // ── Main ────────────────────────────────────────────────────────────────────
 
+/** `update`: refresh the marketplace, then update each installed plugin. `uninstall`: remove them all. */
+async function lifecycle(args, catalog, state) {
+  const installed = [...state.entries()]
+  if (installed.length === 0) {
+    console.log(dim(`No Clarity plugins are installed. Install with: npx github:${SOURCE}`))
+    return
+  }
+  const updating = args.command === 'update'
+  const verb = updating ? 'update' : 'uninstall'
+  console.log(`\n${bold(updating ? 'Update' : 'Uninstall')}: ${installed.map(([n]) => n).join(', ')}`)
+  const commands = installed.map(([name, s]) => ['plugin', verb, `${name}@${catalog.marketplace}`, '--scope', s.scope && s.scope !== 'synced' ? s.scope : args.scope])
+  if (updating) {
+    commands.unshift(['plugin', 'marketplace', 'update', catalog.marketplace])
+  } else {
+    commands.push(['plugin', 'marketplace', 'remove', catalog.marketplace])
+  }
+  if (args.dryRun) {
+    console.log(dim('Dry run. These would run:'))
+    commands.forEach(c => console.log(dim(`  ${CLAUDE} ${c.join(' ')}`)))
+    return
+  }
+  if (!args.yes && tty && !(await confirm(`\n${updating ? 'Update' : 'Remove'} ${installed.length} plugin(s)?`))) {
+    console.log(dim('Nothing changed.'))
+    return
+  }
+  let failed = 0
+  for (const c of commands) {
+    const run = claude(c, { quiet: true })
+    const label = c.slice(1, 3).join(' ')
+    if (run.status === 0) {
+      console.log(`${green('✓')} ${label}`)
+    } else {
+      failed += 1
+      console.log(`${red('✗')} ${label}\n${dim((run.stderr || run.stdout).trim())}`)
+    }
+  }
+  console.log(failed === 0 ? `\n${green('Done.')} Start a new Claude Code session to load the changes.` : `\n${red(`${failed} step(s) failed.`)}`)
+  process.exit(failed === 0 ? 0 : 1)
+}
+
 async function main() {
   let args
   try {
@@ -156,6 +196,10 @@ async function main() {
   const legacy = readLegacy(listed.status === 0 ? listed.stdout : '[]')
   if (legacy.length > 0) {
     console.log(dim(`Found ${legacy.length} plugin(s) installed under the old name "${LEGACY_MARKETPLACE}"; they move to "${catalog.marketplace}".`))
+  }
+
+  if (args.command === 'update' || args.command === 'uninstall') {
+    return lifecycle(args, catalog, state)
   }
 
   if (args.list) {

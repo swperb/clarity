@@ -1,0 +1,34 @@
+# Changelog
+
+## 1.0.0 (2026-11-14)
+
+First public release of Clarity for Claude Code.
+
+**Install everything:** `npx github:swperb/clarity` opens a picker with every theme and
+plugin checked. `config` changes your picks later, `update` brings everything up to date,
+and `uninstall` removes it all. Installs made under the earlier `claude-code-themes` name
+move over automatically.
+
+### Clarity theme
+- 7:1 text contrast on every surface, colorblind-safe status colors, stronger focus rings.
+- Leaves diff colors as the app's standard green and red.
+
+### Workbench
+- Attention band: failing or recovered tests (read from the runner's own summary, so a
+  failure inside `npm test; echo done` still shows), uncommitted and unpushed work, and
+  a filling context window, with commit and compact shortcuts.
+- Risky-command guard: asks before force-pushes, hard resets, sweeping deletes, dropped
+  tables, `curl | sh`, package publishes, infrastructure teardown and more.
+- Changed-files pane with exact line counts; click a file to mention it.
+- Usage chip that opens a plain-language explanation of time, cost, context and limits.
+- Tracks file and test tools from other MCP servers, not only the built-ins.
+
+### Factory
+- A floor pane of every session across your projects, grouped by project.
+- A needs-you queue with one batched notification.
+- A per-project color tint, so you always know which project a window belongs to.
+- A radar that warns when two sessions edit the same file.
+
+### Studio
+- A soft IDE beside the chat: file tree, live viewer and activity strip that follow what
+  Claude reads, edits, searches and runs, including through MCP tools.

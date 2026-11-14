@@ -103,6 +103,8 @@ export const HELP = `Clarity installer
 
   npx github:${SOURCE}                 pick what to install (everything is checked)
   npx github:${SOURCE} config          change what's installed later (same picker)
+  npx github:${SOURCE} update          update every installed Clarity plugin to the latest
+  npx github:${SOURCE} uninstall       remove every Clarity plugin and the marketplace
 
 Options
   --all                 install or enable everything, no picker
@@ -125,6 +127,8 @@ export function parseArgs(argv) {
     switch (arg) {
       case 'config':
       case 'install':
+      case 'update':
+      case 'uninstall':
         out.command = arg
         break
       case '--all':

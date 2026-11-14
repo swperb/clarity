@@ -1,12 +1,21 @@
 {
   "name": "clarity",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Clarity for Claude Code: a theme and plugins that make long sessions calmer and more productive. One-command installer.",
   "type": "module",
-  "bin": { "clarity": "installer/cli.mjs" },
-  "scripts": { "test": "node --test installer/" },
-  "files": ["installer/", ".claude-plugin/marketplace.json"],
-  "engines": { "node": ">=18" },
+  "bin": {
+    "clarity": "installer/cli.mjs"
+  },
+  "scripts": {
+    "test": "node --test installer/"
+  },
+  "files": [
+    "installer/",
+    ".claude-plugin/marketplace.json"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "repository": "github:swperb/clarity",
   "license": "MIT",
   "private": true
