@@ -44,6 +44,8 @@ declare module 'claude-code' {
       expanded: Shaped<string[]>
       view: Shaped<View | null>
       isFollowing: boolean
+      /** A main-loop turn is running: from turn.start (or its first tool call) to turn.complete. */
+      isWorking: boolean
       tab: Tab
       canDock: boolean
       isOpened: boolean

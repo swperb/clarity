@@ -244,3 +244,82 @@ export function modelName(id: string): string {
   const family = m[1].charAt(0).toUpperCase() + m[1].slice(1)
   return m[3] === undefined || m[3].length > 2 ? `${family} ${m[2]}` : `${family} ${m[2]}.${m[3]}`
 }
+
+// ── MCP tools ───────────────────────────────────────────────────────────────
+// Work routed through an MCP server (`mcp__<server>__<tool>`) is recognised by
+// its input's shape, as Workbench does, plus reads. Its results carry no
+// structured patch, so a change is rebuilt from the input.
+
+export type McpTouch =
+  | { kind: 'read'; path: string; more: number }
+  | { kind: 'edit'; path: string; oldText: string; newText: string; adds: number; dels: number }
+  | { kind: 'write'; path: string; content: string; adds: number }
+  | { kind: 'shell'; command: string }
+  | { kind: 'checks'; label: string }
+
+/** Lines in a text, a trailing newline not counted as one more. */
+export function lineCount(s: string): number {
+  return s === '' ? 0 : s.split('\n').length - (s.endsWith('\n') ? 1 : 0)
+}
+
+export function classifyMcpTool(tool: string, input: Readonly<Record<string, unknown>>): McpTouch | undefined {
+  if (!tool.startsWith('mcp__')) {
+    return undefined
+  }
+  const short = tool.split('__').pop()?.toLowerCase() ?? ''
+  const path = [input.path, input.file_path, input.filePath].find((p): p is string => typeof p === 'string')
+  if (path !== undefined && typeof input.old_string === 'string' && typeof input.new_string === 'string') {
+    return {
+      kind: 'edit', path, oldText: input.old_string, newText: input.new_string,
+      adds: lineCount(input.new_string), dels: lineCount(input.old_string),
+    }
+  }
+  if (path !== undefined && typeof input.content === 'string' && /write|create|save|put/.test(short)) {
+    return { kind: 'write', path, content: input.content, adds: lineCount(input.content) }
+  }
+  if (typeof input.command === 'string' && /bash|shell|exec|run|terminal/.test(short)) {
+    return { kind: 'shell', command: input.command }
+  }
+  if (/(^|_)(run_?)?(checks?|tests?)$/.test(short)) {
+    return { kind: 'checks', label: short.replace(/_/g, ' ') }
+  }
+  if (/read|view|open|cat/.test(short)) {
+    const paths = Array.isArray(input.paths) ? input.paths.filter((p): p is string => typeof p === 'string') : []
+    const first = path ?? paths[0]
+    if (first !== undefined) {
+      return { kind: 'read', path: first, more: Math.max(0, paths.length - (path === undefined ? 1 : 0)) }
+    }
+  }
+  return undefined
+}
+
+/** A one-hunk diff replacing `oldText` with `newText` at line `at`. */
+export function replacementDiff(oldText: string, newText: string, at = 1): string {
+  const strip = (s: string) => (s.endsWith('\n') ? s.slice(0, -1) : s)
+  const olds = oldText === '' ? [] : strip(oldText).split('\n')
+  const news = newText === '' ? [] : strip(newText).split('\n')
+  return [`@@ -${at},${olds.length} +${at},${news.length} @@`, ...olds.map(l => `-${l}`), ...news.map(l => `+${l}`)].join('\n')
+}
+
+/** The 1-based line where `needle` starts in `text`, or undefined. */
+export function lineOf(text: string, needle: string): number | undefined {
+  const i = needle === '' ? -1 : text.indexOf(needle)
+  return i < 0 ? undefined : text.slice(0, i).split('\n').length
+}
+
+/** The readable text of an MCP result: its text blocks, else the text the model read. */
+export function mcpText(result: unknown, text: string | undefined): string {
+  if (typeof result === 'string') {
+    return result
+  }
+  const content = (result as { content?: unknown } | null)?.content
+  if (Array.isArray(content)) {
+    const parts = content
+      .map(b => (b !== null && typeof b === 'object' && (b as { type?: unknown }).type === 'text' ? (b as { text?: unknown }).text : undefined))
+      .filter((t): t is string => typeof t === 'string')
+    if (parts.length > 0) {
+      return parts.join('\n')
+    }
+  }
+  return text ?? ''
+}

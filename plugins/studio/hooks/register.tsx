@@ -8,21 +8,25 @@ import {
   bashOutput,
   bashStatus,
   branchOf,
+  classifyMcpTool,
   clip,
   countPatch,
   flattenTree,
   hasMarkedChild,
   languageOf,
+  lineOf,
   looksBinary,
+  mcpText,
   modelName,
   patchToDiff,
   relativeTo,
+  replacementDiff,
   searchFiles,
   shortCommand,
   tail,
   tidyListing,
 } from './lib'
-import type { Hunk, TreeRow } from './lib'
+import type { Hunk, McpTouch, TreeRow } from './lib'
 
 // ── State ───────────────────────────────────────────────────────────────────
 // Held by the host for the session, so a hot reload keeps it. Bump a `shape`
@@ -36,6 +40,7 @@ const listings = atom({ plugin: 'studio', key: 'listings' } as const, {}, { shap
 const expanded = atom({ plugin: 'studio', key: 'expanded' } as const, [], { shape: 'expanded-1' })
 const view = atom({ plugin: 'studio', key: 'view' } as const, null, { shape: 'view-1' })
 const isFollowing = atom({ plugin: 'studio', key: 'isFollowing' } as const, true)
+const isWorking = atom({ plugin: 'studio', key: 'isWorking' } as const, false)
 const tab = atom({ plugin: 'studio', key: 'tab' } as const, 'files' as Tab)
 const canDock = atom({ plugin: 'studio', key: 'canDock' } as const, false)
 const isOpened = atom({ plugin: 'studio', key: 'isOpened' } as const, false)
@@ -190,6 +195,20 @@ function activeOf(tool: string, input: Input, cwd: string, id: string): Active {
   }
 }
 
+function activeOfMcp(mcp: McpTouch, cwd: string, id: string): Active {
+  switch (mcp.kind) {
+    case 'read':
+      return { id, verb: 'Reading', path: relativeTo(cwd, mcp.path), label: relativeTo(cwd, mcp.path) }
+    case 'edit':
+    case 'write':
+      return { id, verb: 'Editing', path: relativeTo(cwd, mcp.path), label: relativeTo(cwd, mcp.path) }
+    case 'shell':
+      return { id, verb: 'Running', label: shortCommand(mcp.command) }
+    default:
+      return { id, verb: 'Running', label: mcp.label }
+  }
+}
+
 async function markFile($: Engine, path: string, change: Partial<FileMark> & { adds?: number; dels?: number }): Promise<void> {
   await update($, marks, all => {
     const old = all[path] ?? { adds: 0, dels: 0, isEdited: false, isRead: false }
@@ -298,6 +317,55 @@ async function touchOf($: Engine, tool: string, input: Input, ran: Ran, cwd: str
   return undefined
 }
 
+/** What one finished MCP call adds to the activity strip: its results have no patch, so the input is the record. */
+async function mcpTouchOf($: Engine, tool: string, mcp: McpTouch, ran: Ran, cwd: string, id: string): Promise<Touch | undefined> {
+  if (ran.deny !== undefined) {
+    return undefined
+  }
+  const at = await $.clock.now()
+  const isError = ran.isError === true
+  const [, server = 'mcp', short = tool] = tool.split('__')
+
+  if (mcp.kind === 'shell' || mcp.kind === 'checks') {
+    const command = mcp.kind === 'shell' ? mcp.command : `${short} (via ${server})`
+    const label = mcp.kind === 'shell' ? `Ran ${shortCommand(mcp.command, 48)}` : `Ran ${mcp.label.replace(/^run /, '')}`
+    const isOk = !isError
+    return {
+      id, kind: 'run', label: `${label} ${isOk ? '✓' : '✗'}`, isOk, at,
+      view: { kind: 'bash', command, isOk, status: bashStatus(isError, undefined, ran.text), output: tail(mcpText(ran.result, ran.text), 60) },
+    }
+  }
+  if (isError) {
+    return undefined
+  }
+  const path = relativeTo(cwd, mcp.path)
+
+  if (mcp.kind === 'read') {
+    await markFile($, path, { isRead: true })
+    const more = mcp.more > 0 ? ` +${mcp.more} more` : ''
+    return { id, kind: 'read', label: `Read ${path}${more}`, path, at, view: await fileView($, cwd, path) }
+  }
+  if (mcp.kind === 'write') {
+    await markFile($, path, { isEdited: true, adds: mcp.adds })
+    return {
+      id, kind: 'edit', label: `Wrote ${path}`, path, adds: mcp.adds, dels: 0, at,
+      view: { kind: 'created', path, source: clip(mcp.content, 800, 30000).text, adds: mcp.adds },
+    }
+  }
+  // An edit: rebuild the change from old_string/new_string, placed where the new text now stands.
+  let startLine = 1
+  try {
+    startLine = lineOf(await $.fs.read(absoluteIn(cwd, path)), mcp.newText) ?? 1
+  } catch {
+    startLine = 1
+  }
+  await markFile($, path, { isEdited: true, adds: mcp.adds, dels: mcp.dels })
+  return {
+    id, kind: 'edit', label: `Edited ${path}`, path, adds: mcp.adds, dels: mcp.dels, at,
+    view: { kind: 'diff', path, source: clip(replacementDiff(mcp.oldText, mcp.newText, startLine), 1500, 40000).text, adds: mcp.adds, dels: mcp.dels },
+  }
+}
+
 async function record($: Engine, touch: Touch): Promise<void> {
   await update($, touches, list => [touch, ...list.filter(t => t.id !== touch.id)].slice(0, KEEP_TOUCHES))
   if (await read($, isFollowing)) {
@@ -352,14 +420,16 @@ export const register: Register = on => {
 
   on('tool.call', async ($, e, next) => {
     const tool = String(e.tool)
-    if (KIND[tool] === undefined) {
+    const input = e as unknown as Input
+    const mcp = KIND[tool] === undefined ? classifyMcpTool(tool, input) : undefined
+    if (KIND[tool] === undefined && mcp === undefined) {
       return next(e)
     }
-    const input = e as unknown as Input
     const cwd = await cwdOf($).catch(() => '')
     const id = e.tool_use_id ?? `${tool}:${await $.clock.now().catch(() => 0)}`
 
-    await update($, active, list => [...list, activeOf(tool, input, cwd, id)]).catch(() => undefined)
+    await update($, isWorking, () => true).catch(() => undefined)
+    await update($, active, list => [...list, mcp === undefined ? activeOf(tool, input, cwd, id) : activeOfMcp(mcp, cwd, id)]).catch(() => undefined)
     let ran: Ran
     try {
       ran = await next(e)
@@ -368,10 +438,10 @@ export const register: Register = on => {
     }
 
     try {
-      const touch = await touchOf($, tool, input, ran, cwd, id)
+      const touch = mcp === undefined ? await touchOf($, tool, input, ran, cwd, id) : await mcpTouchOf($, tool, mcp, ran, cwd, id)
       if (touch !== undefined) {
         await record($, touch)
-        if (touch.kind === 'edit' && touch.label.startsWith('Created') && touch.path !== undefined) {
+        if (touch.kind === 'edit' && /^(Created|Wrote) /.test(touch.label) && touch.path !== undefined) {
           const parent = touch.path.includes('/') ? touch.path.slice(0, touch.path.lastIndexOf('/')) : '.'
           if ((await read($, listings))[parent] !== undefined) {
             await loadDir($, parent)
@@ -387,7 +457,19 @@ export const register: Register = on => {
     return ran
   }).catch(($, e, next) => next(e)) // Studio only watches: if it fails, the call goes on as if it were not here.
 
+  // Working spans the whole turn, not just the moments a tool runs.
+  on('turn.start', async ($, e, next) => {
+    if (e.agentId === undefined) {
+      await update($, isWorking, () => true).catch(() => undefined)
+    }
+    return next(e)
+  })
+
   on('turn.complete', async ($, e, next) => {
+    if (e.agentId === undefined) {
+      await update($, isWorking, () => false).catch(() => undefined)
+      await update($, active, () => []).catch(() => undefined)
+    }
     await refreshInfo($).catch(() => undefined)
     if (await read($, isOpened).catch(() => false)) {
       await refreshListings($).catch(() => undefined)
@@ -399,7 +481,7 @@ export const register: Register = on => {
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const { Box, Button, Code, Text } = $.ui.resolve(e)
-    const [session, running, recent, marked, lists, open, shown, following, current] = await Promise.all([
+    const [session, running, recent, marked, lists, open, shown, following, current, working] = await Promise.all([
       read($, info),
       read($, active),
       read($, touches),
@@ -409,6 +491,7 @@ export const register: Register = on => {
       read($, view),
       read($, isFollowing),
       read($, tab),
+      read($, isWorking),
     ])
     const now = running[running.length - 1]
 
@@ -426,6 +509,17 @@ export const register: Register = on => {
         )
       }
       const last = recent[0]
+      if (working) {
+        return (
+          <Text wrap="truncate-end">
+            <Text color="suggestion">Working</Text>
+            {last === undefined ? '' : <Text dimColor> · {last.label}</Text>}
+            {last?.adds !== undefined ? (
+              <Text> <Text color="diffAdded">+{last.adds}</Text> <Text color="diffRemoved">−{last.dels ?? 0}</Text></Text>
+            ) : ''}
+          </Text>
+        )
+      }
       return (
         <Text wrap="truncate-end" dimColor={last === undefined}>
           {last === undefined ? `Studio · ${session?.folder ?? ''}` : last.label}
@@ -452,6 +546,11 @@ export const register: Register = on => {
           <Text wrap="truncate-end">
             <Text color="suggestion">● Claude is {now.verb.toLowerCase()}</Text> {now.label}
             {running.length > 1 ? <Text dimColor> +{running.length - 1} more</Text> : ''}
+          </Text>
+        ) : working ? (
+          <Text wrap="truncate-end">
+            <Text color="suggestion">● Claude is working</Text>
+            {recent[0] === undefined ? '' : <Text dimColor> · last: {recent[0].label}</Text>}
           </Text>
         ) : (
           <Text dimColor>○ Idle</Text>
