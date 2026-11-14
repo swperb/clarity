@@ -74,6 +74,12 @@ export function plan(catalog, state, selected, { remove = false } = {}) {
   return steps
 }
 
+/** One argument quoted for cmd.exe: wrapped in quotes when it holds spaces or cmd's special characters. */
+export function cmdQuote(arg) {
+  const s = String(arg)
+  return /[\s"&|<>^%()!]/.test(s) || s === '' ? `"${s.replace(/"/g, '""')}"` : s
+}
+
 /** The `claude` argument vector for one step. */
 export function commandFor(step, marketplace, scope) {
   if (step.action === 'uninstall-legacy') {

@@ -2,11 +2,12 @@
 // and the installer's update/uninstall commands drive the right claude calls.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { chmodSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
+
+import { fakeClaude } from './fake-claude.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const market = JSON.parse(readFileSync(join(ROOT, '.claude-plugin', 'marketplace.json'), 'utf8'))
@@ -42,23 +43,17 @@ test('every plugin in the suite shares one version', () => {
   assert.equal(versions.size, 1, `versions: ${[...versions].join(', ')}`)
 })
 
-function fakeClaude(installed) {
-  const dir = mkdtempSync(join(tmpdir(), 'clarity-'))
-  const log = join(dir, 'calls.log')
-  const fake = join(dir, 'claude')
-  writeFileSync(fake, `#!/bin/sh\necho "$@" >> "${log}"\ncase "$*" in\n  "plugin list --json") echo '${JSON.stringify(installed)}' ;;\n  "plugin marketplace list --json") echo '[{"name":"clarity"}]' ;;\nesac\nexit 0\n`)
-  chmodSync(fake, 0o755)
-  return { fake, calls: () => readFileSync(log, 'utf8').trim().split('\n') }
-}
-
 const run = (fake, ...args) =>
   spawnSync(process.execPath, [join(ROOT, 'installer', 'cli.mjs'), ...args], { env: { ...process.env, CLAUDE_BIN: fake }, encoding: 'utf8' })
 
 test('update refreshes the marketplace, then each installed plugin', () => {
-  const { fake, calls } = fakeClaude([
-    { id: 'workbench@clarity', enabled: true, scope: 'user' },
-    { id: 'studio@clarity', enabled: false, scope: 'project' },
-  ])
+  const { bin: fake, calls } = fakeClaude({
+    installed: [
+      { id: 'workbench@clarity', enabled: true, scope: 'user' },
+      { id: 'studio@clarity', enabled: false, scope: 'project' },
+    ],
+    markets: [{ name: 'clarity' }],
+  })
   assert.equal(run(fake, 'update', '--yes').status, 0)
   assert.deepEqual(calls().slice(1), [
     'plugin marketplace update clarity',
@@ -68,7 +63,7 @@ test('update refreshes the marketplace, then each installed plugin', () => {
 })
 
 test('uninstall removes every plugin, then the marketplace', () => {
-  const { fake, calls } = fakeClaude([{ id: 'clarity-theme@clarity', enabled: true, scope: 'user' }])
+  const { bin: fake, calls } = fakeClaude({ installed: [{ id: 'clarity-theme@clarity', enabled: true, scope: 'user' }], markets: [{ name: 'clarity' }] })
   assert.equal(run(fake, 'uninstall', '--yes').status, 0)
   assert.deepEqual(calls().slice(1), [
     'plugin uninstall clarity-theme@clarity --scope user',

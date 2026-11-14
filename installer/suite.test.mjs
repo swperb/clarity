@@ -1,12 +1,11 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, writeFileSync, readFileSync, chmodSync } from 'node:fs'
-import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 
-import { commandFor, initialSelection, legacySteps, parseArgs, plan, readCatalog, readLegacy, readState, themeConflict } from './suite.mjs'
+import { cmdQuote, commandFor, initialSelection, legacySteps, parseArgs, plan, readCatalog, readLegacy, readState, themeConflict } from './suite.mjs'
+import { fakeClaude } from './fake-claude.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const catalog = {
@@ -77,26 +76,25 @@ test('warns when two themes are selected', () => {
 })
 
 test('end to end against a fake claude: adds the marketplace, then installs what was asked', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'suite-'))
-  const log = join(dir, 'calls.log')
-  const fake = join(dir, 'claude')
-  writeFileSync(
-    fake,
-    `#!/bin/sh\necho "$@" >> "${log}"\ncase "$*" in\n  "plugin list --json") echo '[]' ;;\n  "plugin marketplace list --json") echo '[]' ;;\nesac\nexit 0\n`,
-  )
-  chmodSync(fake, 0o755)
+  const { bin, calls } = fakeClaude()
   const run = spawnSync(process.execPath, [join(ROOT, 'installer', 'cli.mjs'), '--only', 'workbench', '--yes'], {
-    env: { ...process.env, CLAUDE_BIN: fake },
+    env: { ...process.env, CLAUDE_BIN: bin },
     encoding: 'utf8',
   })
   assert.equal(run.status, 0, run.stderr)
-  const calls = readFileSync(log, 'utf8').trim().split('\n')
-  assert.deepEqual(calls, [
+  assert.deepEqual(calls(), [
     'plugin list --json',
     'plugin marketplace list --json',
     'plugin marketplace add swperb/clarity',
     'plugin install workbench@clarity --scope user',
   ])
+})
+
+test('cmdQuote keeps plain arguments and quotes risky ones for cmd.exe', () => {
+  assert.equal(cmdQuote('workbench@clarity'), 'workbench@clarity')
+  assert.equal(cmdQuote('C:\\Program Files\\claude.cmd'), '"C:\\Program Files\\claude.cmd"')
+  assert.equal(cmdQuote('a&b'), '"a&b"')
+  assert.equal(cmdQuote('say "hi"'), '"say ""hi"""')
 })
 
 test('moves installs from the old claude-code-themes names to clarity', () => {

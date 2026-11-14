@@ -7,7 +7,7 @@
     "clarity": "installer/cli.mjs"
   },
   "scripts": {
-    "test": "node --test installer/*.test.mjs"
+    "test": "node installer/run-tests.mjs"
   },
   "files": [
     "installer/",

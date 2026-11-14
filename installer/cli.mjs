@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url'
 import {
   HELP,
   LEGACY_MARKETPLACE,
+  cmdQuote,
   legacySteps,
   readLegacy,
   SOURCE,
@@ -31,7 +32,12 @@ const red = t => paint('31', t)
 const accent = t => paint('36', t)
 
 function claude(args, { quiet = false } = {}) {
-  const run = spawnSync(CLAUDE, args, { encoding: 'utf8', stdio: quiet ? 'pipe' : ['ignore', 'pipe', 'pipe'] })
+  const options = { encoding: 'utf8', stdio: quiet ? 'pipe' : ['ignore', 'pipe', 'pipe'] }
+  // On Windows `claude` is a .cmd shim, which Node only starts through the
+  // shell; arguments are quoted for cmd.exe so a path with spaces survives.
+  const run = process.platform === 'win32'
+    ? spawnSync([CLAUDE, ...args].map(cmdQuote).join(' '), { ...options, shell: true })
+    : spawnSync(CLAUDE, args, options)
   if (run.error) {
     throw new Error(`Couldn't run \`${CLAUDE}\`. Is Claude Code installed and on your PATH? (${run.error.message})`)
   }
