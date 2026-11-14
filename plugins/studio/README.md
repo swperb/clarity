@@ -28,6 +28,11 @@ A closed folder with edits inside shows a dim `•`.
 - an **Edit**, **Write** or **NotebookEdit** shows the change as a diff (a new file shows its content);
 - a **Grep** or **Glob** shows the query and the matched files, each a row you can open;
 - a **Bash** call shows the command, `✓ exit 0` or `✗ exit 1`, and the end of its output.
+- work routed through an **MCP server** is followed too. Studio recognises any `mcp__…` tool by
+  its input: a `path` with `old_string`/`new_string` is an edit (shown as a diff), a `path` with
+  `content` on a write/create tool is a write, a `command` on a bash/shell/exec/run tool is a
+  command, a `run_checks`/`run_tests` tool is a test run, and a `path` on a read/view/open/cat tool
+  is a read (the viewer opens the file).
 
 Click a file in the tree and the viewer pins to it, pausing Follow; press **Follow**
 to pick back up at Claude's latest touch. **@ Mention** puts `@path ` into your prompt.

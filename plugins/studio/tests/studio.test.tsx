@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 import type { On } from 'claude-code'
 
-import { branchOf, flattenTree, languageOf, modelName, patchToDiff, searchFiles, tidyListing } from '../hooks/lib'
+import { branchOf, classifyMcpTool, flattenTree, languageOf, modelName, patchToDiff, replacementDiff, searchFiles, tidyListing } from '../hooks/lib'
 
 const CWD = '/work/shop'
 
@@ -262,4 +262,91 @@ test('helpers: languages, diffs, branches, models, search results, tree', async 
     a: [{ name: 'x.ts', kind: 'file' as const, size: 1 }],
   }
   expect(flattenTree(listings, ['a']).map(r => `${r.depth}:${r.path}`)).toEqual(['0:a', '1:a/x.ts', '0:b.txt'])
+})
+
+// ── MCP tools ───────────────────────────────────────────────────────────────
+
+test('an MCP edit shows as a diff rebuilt from its input, and the live line follows it', async ($, on) => {
+  engine(on)
+  let release = (): void => undefined
+  const gate = new Promise<void>(resolve => {
+    release = resolve
+  })
+  on('tool.call', async () => {
+    await gate
+    return { result: { content: [{ type: 'text', text: 'edited · budget 90%' }] } }
+  })
+
+  await $.session.start({ cwd: CWD, surface: 'desktop', isInteractive: true })
+  const ui = await $.ui.mount(pane(120))
+  expect((await ui.find({ type: 'Text', text: /Idle/ })) !== undefined).toBe(true)
+
+  const call = $.tool.call({ tool: 'mcp__ndstrl__edit', path: 'src/cart.js', old_string: 'items => 1', new_string: 'items => 0', tool_use_id: 'm1' } as never)
+  let line: string | undefined
+  for (let i = 0; i < 50 && line === undefined; i++) {
+    line = (await ui.find({ type: 'Text', text: /Claude is editing/ }))?.text
+    if (line === undefined) {
+      await Promise.resolve()
+    }
+  }
+  expect(line).toContain('Claude is editing src/cart.js')
+  release()
+  await call
+
+  const code = await ui.find({ type: 'Code' })
+  expect(code?.props.format).toBe('diff')
+  expect(code?.props.source).toBe('@@ -1,1 +1,1 @@\n-items => 1\n+items => 0')
+  expect((await ui.find({ type: 'Button', key: 'touch:m1' }))?.text).toContain('Edited src/cart.js +1 −1')
+  expect((await ui.find({ type: 'Text', text: /Idle/ })) !== undefined).toBe(true)
+  await ui.unmount()
+})
+
+test('an MCP write shows its content; an MCP read opens the file; failing checks show ✗', async ($, on) => {
+  engine(on)
+  on('tool.call', (_, e) =>
+    String(e.tool) === 'mcp__ndstrl__run_checks'
+      ? { isError: true, result: 'checks failed: 1 of 4', text: 'checks failed: 1 of 4' }
+      : { result: { content: [{ type: 'text', text: 'ok' }] } },
+  )
+
+  await $.session.start({ cwd: CWD, surface: 'desktop', isInteractive: true })
+  await $.tool.call({ tool: 'mcp__ndstrl__write', path: `${CWD}/src/tax.ts`, content: 'export const rate = 0.2\n', tool_use_id: 'w1' } as never)
+  const ui = await $.ui.mount(pane(120))
+  expect((await ui.find({ type: 'Code' }))?.props.source).toBe('export const rate = 0.2\n')
+  expect((await ui.find({ type: 'Code' }))?.props.language).toBe('typescript')
+  expect((await ui.find({ type: 'Button', key: 'touch:w1' }))?.text).toContain('Wrote src/tax.ts +1 −0')
+
+  await $.tool.call({ tool: 'mcp__ndstrl__read', paths: ['README.md', 'src/cart.js'], tool_use_id: 'r1' } as never)
+  expect((await ui.find({ type: 'Code' }))?.props.source).toBe('export const total = items => 0\n')
+  expect((await ui.find({ type: 'Button', key: 'touch:r1' }))?.text).toContain('Read README.md +1 more')
+
+  await $.tool.call({ tool: 'mcp__ndstrl__run_checks', tool_use_id: 'c1' } as never)
+  expect((await ui.find({ type: 'Button', key: 'touch:c1' }))?.text).toContain('Ran checks')
+  expect((await ui.find({ type: 'Text', text: /✗ failed/ }))?.props.color).toBe('error')
+  await ui.unmount()
+})
+
+test('MCP tools it cannot place are left alone', async ($, on) => {
+  engine(on)
+  on('tool.call', () => ({ result: { content: [] } }))
+
+  await $.session.start({ cwd: CWD, surface: 'desktop', isInteractive: true })
+  await $.tool.call({ tool: 'mcp__ndstrl__ask', question: 'which file?', tool_use_id: 'q1' } as never)
+  const ui = await $.ui.mount(pane(120))
+  expect(await ui.find({ type: 'Button', key: 'touch:q1' })).toBe(undefined)
+  await ui.unmount()
+})
+
+test('helpers: MCP tools by input shape, and replacement diffs', async () => {
+  expect(classifyMcpTool('mcp__ndstrl__edit', { path: 'a.ts', old_string: 'x', new_string: 'y\nz' })).toEqual({
+    kind: 'edit', path: 'a.ts', oldText: 'x', newText: 'y\nz', adds: 2, dels: 1,
+  })
+  expect(classifyMcpTool('mcp__fs__write_file', { path: 'a.ts', content: 'a\n' })?.kind).toBe('write')
+  expect(classifyMcpTool('mcp__box__exec', { command: 'ls' })?.kind).toBe('shell')
+  expect(classifyMcpTool('mcp__ndstrl__run_checks', {})?.kind).toBe('checks')
+  expect(classifyMcpTool('mcp__fs__read_text_file', { path: 'a.ts' })).toEqual({ kind: 'read', path: 'a.ts', more: 0 })
+  expect(classifyMcpTool('mcp__ndstrl__read', { paths: ['a', 'b', 'c'] })).toEqual({ kind: 'read', path: 'a', more: 2 })
+  expect(classifyMcpTool('mcp__ndstrl__search', { query: 'x' })).toBe(undefined)
+  expect(classifyMcpTool('Read', { file_path: 'a' })).toBe(undefined)
+  expect(replacementDiff('a\nb\n', 'c\n', 7)).toBe('@@ -7,2 +7,1 @@\n-a\n-b\n+c')
 })
