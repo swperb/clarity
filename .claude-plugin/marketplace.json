@@ -10,7 +10,7 @@
     {
       "name": "workbench",
       "source": "./plugins/workbench",
-      "description": "Quiet productivity: an attention band for failing tests, uncommitted work and context fill; a risky-command guard; a changed-files pane; a cost/time status line."
+      "description": "Quiet productivity: an attention band for failing tests, uncommitted work and context fill; a risky-command guard; a changed-files pane; a usage chip that explains time, cost and context when clicked."
     }
   ]
 }

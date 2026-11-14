@@ -74,3 +74,49 @@ test('the pane lists an edited file with its line counts', async ($, on) => {
   expect((await ui.find({ type: 'Button', key: 'file:src/main.ts' })) !== undefined).toBe(true)
   await ui.unmount()
 })
+
+test('a new file counts its lines as added', async ($, on) => {
+  on('session.cwd', () => ({ value: '/work/app' }))
+  on('clock.now', () => ({ value: 1000 }))
+  on('ui.open', () => ({ value: { isPlaced: true } }))
+  on('tool.call', () => ({ result: { type: 'create', structuredPatch: [], originalFile: null } }))
+
+  await $.tool.call({ tool: 'Write', file_path: '/work/app/src/new.ts', content: 'a\nb\nc\n' })
+
+  const ui = await $.ui.mount(PANE)
+  expect((await ui.find({ type: 'Text', text: /\+3/ })) !== undefined).toBe(true)
+  await ui.unmount()
+})
+
+test('the band carries a clickable usage chip, and the usage pane explains it', async ($, on) => {
+  on('clock.now', () => ({ value: 18 * 60_000 }))
+  on('session.usage', () => ({
+    value: {
+      startedAt: 0,
+      context: { window: 200_000, tokens: 56_000, percent: 28 },
+      rateLimits: [{ kind: 'five_hour', percentUsed: 34 }],
+      cost: { usd: 8.49 },
+    },
+  }))
+  on('session.measure', (_, e) => ({ changed: e.changed }))
+  on('ui.status', () => ({ value: undefined }))
+
+  await $.session.measure({
+    context: { window: 200_000, tokens: 56_000, percent: 28 },
+    rateLimits: [{ kind: 'five_hour', percentUsed: 34 }],
+    cost: { usd: 8.49 },
+    changed: ['cost'],
+  })
+
+  const band = await $.ui.mount(BAND)
+  const chip = await band.find({ type: 'Button', key: 'usage' })
+  expect(chip?.text).toContain('$8.49')
+  expect(chip?.text).toContain('28% context')
+  await band.unmount()
+
+  const pane = await $.ui.mount({ ...PANE, requestId: 'workbench-usage', props: { ...PANE.props, title: 'Session usage' } })
+  expect((await pane.find({ type: 'Text', text: /Context · 28%/ })) !== undefined).toBe(true)
+  expect((await pane.find({ type: 'Text', text: /working memory/ })) !== undefined).toBe(true)
+  expect((await pane.find({ type: 'Text', text: /5-hour window 34%/ })) !== undefined).toBe(true)
+  await pane.unmount()
+})

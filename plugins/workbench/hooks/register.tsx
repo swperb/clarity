@@ -1,19 +1,20 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface as Engine, Register } from 'claude-code'
 
-import type { ChangedFile, Feature, Features, GitState, TestRun } from '../types'
-import { countPatch, formatDuration, parseGitStatus, relativeTo, riskOf, testCommandOf } from './lib'
+import type { ChangedFile, Feature, Features, GitState, TestRun, UsageView } from '../types'
+import { countPatch, formatDuration, formatTokens, parseGitStatus, relativeTo, riskOf, testCommandOf, untilReset } from './lib'
 
 // ── State ───────────────────────────────────────────────────────────────────
 // Held by the host for the session, so a hot reload keeps it. Bump a `shape`
 // tag when its type changes: values stored under an old tag read as initial.
 
-const ALL_ON: Features = { band: true, guard: true, changes: true, status: true }
+const ALL_ON: Features = { band: true, guard: true, changes: true, usage: true, status: false }
 const FEATURE_INFO: Record<Feature, string> = {
   band: 'Attention band: failing tests, uncommitted work, a filling context window',
   guard: 'Risky-command guard: asks before force-pushes, hard resets, sweeping deletes',
   changes: 'Changed-files pane: every file Claude edited this session',
-  status: 'Status line: session time, cost and context use',
+  usage: 'Usage chip in the band: time, cost and context; click it for what each means',
+  status: 'Plain status-line copy of the usage figures (off by default; it cannot be clicked)',
 }
 
 const features = atom({ plugin: 'workbench', key: 'features' } as const, ALL_ON)
@@ -22,8 +23,11 @@ const tests = atom({ plugin: 'workbench', key: 'tests' } as const, null, { shape
 const git = atom({ plugin: 'workbench', key: 'git' } as const, null, { shape: 'git-1' })
 const context = atom({ plugin: 'workbench', key: 'context' } as const, null)
 const isPaneOpened = atom({ plugin: 'workbench', key: 'isPaneOpened' } as const, false)
+const usage = atom({ plugin: 'workbench', key: 'usage' } as const, null, { shape: 'usage-1' })
+const isUsageOpen = atom({ plugin: 'workbench', key: 'isUsageOpen' } as const, false)
 
 const PANE = 'workbench-changes'
+const USAGE_PANE = 'workbench-usage'
 const STORE_KEY = 'features'
 
 // ── Effects ─────────────────────────────────────────────────────────────────
@@ -44,30 +48,66 @@ async function refreshGit($: Engine): Promise<void> {
   }
 }
 
+/** A bar of block characters, `fraction` 0..1. */
+function bar(fraction: number, width = 28): string {
+  const filled = Math.round(Math.max(0, Math.min(1, fraction)) * width)
+  return `${'█'.repeat(filled)}${'░'.repeat(width - filled)}`
+}
+
+/** "⏱ 18m · $8.49 · 28% context" */
+function usageLine(view: UsageView): string {
+  const parts = [`⏱ ${formatDuration(view.now - view.startedAt)}`]
+  if (view.usd !== undefined) {
+    parts.push(`$${view.usd.toFixed(2)}`)
+  }
+  if (view.percent !== undefined) {
+    parts.push(`${view.percent}% context`)
+  }
+  return parts.join(' · ')
+}
+
 async function refreshStatus($: Engine): Promise<void> {
-  if (!(await isOn($, 'status'))) {
-    $.ui.status(undefined)
-    return
+  // The breakdown is a local estimate (`summary` sends no requests); only
+  // worth computing while the usage pane is open.
+  const withRows = await read($, isUsageOpen)
+  const live = await $.session.usage(withRows ? { breakdown: 'summary' } : undefined)
+  const view: UsageView = {
+    startedAt: live.startedAt,
+    now: await $.clock.now(),
+    usd: live.cost?.usd,
+    percent: live.context.percent,
+    tokens: live.context.tokens,
+    window: live.context.window,
+    rateLimits: live.rateLimits.map(r => ({ kind: r.kind, percentUsed: r.percentUsed, resetsAt: r.resetsAt })),
+    rows: live.context.breakdown?.categories
+      .filter(c => !c.isDeferred)
+      .map(c => ({ name: c.name, tokens: c.tokens, kind: c.kind })),
   }
-  const usage = await $.session.usage()
-  const parts = [`⏱ ${formatDuration((await $.clock.now()) - usage.startedAt)}`]
-  if (usage.cost !== undefined) {
-    parts.push(`$${usage.cost.usd.toFixed(2)}`)
+  await update($, usage, () => view)
+  $.ui.status((await isOn($, 'status')) ? usageLine(view) : undefined)
+}
+
+async function openUsage($: Engine): Promise<void> {
+  await update($, isUsageOpen, () => true)
+  await refreshStatus($)
+  await $.ui.open({ id: USAGE_PANE, title: 'Session usage' })
+}
+
+function lineCount(text: string | undefined): number {
+  if (text === undefined || text === '') {
+    return 0
   }
-  if (usage.context.percent !== undefined) {
-    parts.push(`${usage.context.percent}% context`)
-  }
-  $.ui.status(parts.join('  ·  '))
+  return text.split('\n').length - (text.endsWith('\n') ? 1 : 0)
 }
 
 type FileResult = { type?: string; structuredPatch?: { lines: string[] }[]; originalFile?: string | null }
 
-async function recordChange($: Engine, absolutePath: string, result: unknown, isWholeFile: boolean): Promise<void> {
+async function recordChange($: Engine, absolutePath: string, result: unknown, isWholeFile: boolean, content?: string): Promise<void> {
   const r = (result ?? {}) as FileResult
   const isNew = r.type === 'create' || (isWholeFile && r.originalFile === null)
   const counted = countPatch(r.structuredPatch)
   // A brand-new file has no patch: count its lines as added.
-  const fallbackAdds = isNew && counted.adds === 0 ? 1 : 0
+  const fallbackAdds = isNew && counted.adds === 0 ? lineCount(content) : 0
   const path = relativeTo(await $.session.cwd(), absolutePath)
   const at = await $.clock.now()
 
@@ -88,6 +128,7 @@ async function recordChange($: Engine, absolutePath: string, result: unknown, is
     await update($, isPaneOpened, () => true)
     void $.ui.open({ id: PANE, title: 'Changed files' })
   }
+  void refreshGit($)
 }
 
 // ── Register ────────────────────────────────────────────────────────────────
@@ -101,6 +142,7 @@ export const register: Register = on => {
       description: 'Show or switch Workbench features: /workbench [band|guard|changes|status] [on|off]',
     })
     await $.command.register({ name: 'changes', description: 'Open the pane of files Claude changed this session' })
+    await $.command.register({ name: 'usage', description: 'What this session has used so far: time, cost, context, limits, explained' })
     void refreshGit($)
     void refreshStatus($)
     return next(e)
@@ -116,7 +158,7 @@ export const register: Register = on => {
       const next: Features = { ...current, [name]: state === 'on' }
       await update($, features, () => next)
       await $.store.set(STORE_KEY, next)
-      if (name === 'status') {
+      if (name === 'status' || name === 'usage') {
         await refreshStatus($)
       }
       return { text: `Workbench ${name} is ${state}. This sticks across sessions.` }
@@ -132,6 +174,11 @@ export const register: Register = on => {
     await update($, isPaneOpened, () => true)
     await $.ui.open({ id: PANE, title: 'Changed files' })
     return { text: 'Opened the Changed files pane.' }
+  })
+
+  on('command.run', { command: 'usage' }, async $ => {
+    await openUsage($)
+    return { text: 'Opened the Session usage pane.' }
   })
 
   // ── 1. Risky-command guard ────────────────────────────────────────────────
@@ -154,6 +201,9 @@ export const register: Register = on => {
 
   on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
     const ran = await next(e)
+    if (/\bgit\s/.test(e.command)) {
+      void refreshGit($)
+    }
     const command = testCommandOf(e.command)
     if (command !== undefined && ran.deny === undefined) {
       const run: TestRun = { command, isPassing: ran.isError !== true, at: await $.clock.now() }
@@ -175,7 +225,7 @@ export const register: Register = on => {
   on('tool.call', { tool: 'Write' }, async ($, e, next) => {
     const ran = await next(e)
     if (ran.deny === undefined && ran.isError !== true && (await isOn($, 'changes'))) {
-      await recordChange($, e.file_path, ran.result, true).catch(() => undefined)
+      await recordChange($, e.file_path, ran.result, true, e.content).catch(() => undefined)
     }
     return ran
   })
@@ -211,12 +261,13 @@ export const register: Register = on => {
     const run = await read($, tests)
     const repo = await read($, git)
     const fill = await read($, context)
+    const view = (await isOn($, 'usage')) ? await read($, usage) : null
 
     const showTests = run !== null
     const showGit = repo !== null && (repo.dirty > 0 || repo.ahead > 0)
     const showContext = fill !== null && fill >= 60
 
-    if (!showTests && !showGit && !showContext) {
+    if (!showTests && !showGit && !showContext && view === null) {
       return next(e) // All quiet: draw nothing.
     }
 
@@ -224,7 +275,8 @@ export const register: Register = on => {
     const fillColor = fill !== null && fill >= 90 ? 'error' : fill !== null && fill >= 75 ? 'warning' : 'subtle'
 
     return (
-      <Box flexDirection="row" flexWrap="wrap" columnGap={3}>
+      <Box flexDirection="row" justifyContent="space-between" columnGap={3}>
+      <Box flexDirection="row" flexWrap="wrap" columnGap={3} flexShrink={1}>
         {showTests && (
           <Text color={run.isPassing ? 'success' : 'error'} bold={!run.isPassing}>
             {run.isPassing ? '✓ Tests passing' : '✗ Tests failing'}
@@ -264,6 +316,110 @@ export const register: Register = on => {
                 compact…
               </Button>
             )}
+          </Box>
+        )}
+      </Box>
+      {view !== null && (
+        <Button key="usage" plain dimColor onPress={() => openUsage($)}>
+          {usageLine(view)} ⓘ
+        </Button>
+      )}
+      </Box>
+    )
+  })
+
+  // ── Drawing: the session usage pane, every figure explained ───────────────
+
+  on('ui.render', { component: 'Pane', requestId: USAGE_PANE }, async ($, e) => {
+    const { Box, Button, Text } = $.ui.resolve(e)
+    const view = await read($, usage)
+
+    if (view === null) {
+      return <Text dimColor>Measuring… figures appear after Claude's first reply.</Text>
+    }
+    if (e.props.placement === 'widget') {
+      return <Text>{usageLine(view)}</Text>
+    }
+
+    const elapsed = formatDuration(view.now - view.startedAt)
+    const hours = Math.max((view.now - view.startedAt) / 3_600_000, 1 / 60)
+    const used = (view.rows ?? []).filter(r => r.kind !== 'free' && r.kind !== 'buffer' && r.tokens > 0)
+    const fillColor = (view.percent ?? 0) >= 90 ? 'error' : (view.percent ?? 0) >= 75 ? 'warning' : 'success'
+    const limitName: Record<string, string> = {
+      five_hour: '5-hour window',
+      seven_day: '7-day window',
+      spend_limit: 'Spend limit',
+    }
+
+    return (
+      <Box flexDirection="column" rowGap={1}>
+        <Box flexDirection="column">
+          <Text weight="semibold">⏱ Time · {elapsed}</Text>
+          <Text dimColor>How long this session has been open, counted from when it started (or first started, if resumed).</Text>
+        </Box>
+
+        {view.usd !== undefined && (
+          <Box flexDirection="column">
+            <Text weight="semibold">
+              $ Cost · ${view.usd.toFixed(2)} <Text dimColor>(about ${(view.usd / hours).toFixed(2)}/hour)</Text>
+            </Text>
+            <Text dimColor>
+              What this session's model calls come to at API prices, the same total /cost shows. On a Claude
+              subscription it's a measure of how much you've used, not a separate bill.
+            </Text>
+          </Box>
+        )}
+
+        <Box flexDirection="column" rowGap={1}>
+          <Text weight="semibold">
+            ◔ Context · {view.percent ?? 0}%{' '}
+            <Text dimColor>
+              ({view.tokens === undefined ? '—' : formatTokens(view.tokens)} of {formatTokens(view.window)} tokens)
+            </Text>
+          </Text>
+          <Text color={fillColor}>{bar((view.percent ?? 0) / 100)}</Text>
+          <Text dimColor>
+            Claude's working memory for this conversation: every message, file it read, and tool result so far.
+            Near the limit Claude compacts, summarizing older messages to make room, and small details can be
+            lost. Compacting yourself at a natural break lets you choose when.
+          </Text>
+          {used.length > 0 && (
+            <Box flexDirection="column">
+              <Text dimColor size="footnote">What's in it now</Text>
+              {used.map(r => (
+                <Text>
+                  <Text tabular>{formatTokens(r.tokens).padStart(6)}</Text>  {r.name}
+                </Text>
+              ))}
+            </Box>
+          )}
+          <Box flexDirection="row" columnGap={2}>
+            <Button key="compact-now" variant={(view.percent ?? 0) >= 75 ? 'primary' : 'secondary'} label="Compact…" onPress={() => $.prompt.fill({ text: '/compact', mode: 'replace' })} />
+            <Button key="context-detail" label="Full breakdown" onPress={() => $.prompt.fill({ text: '/context', mode: 'replace' })} />
+          </Box>
+          <Text color={fillColor} size="footnote">
+            {(view.percent ?? 0) >= 90
+              ? 'Almost full: compact now or start a fresh session for the next task.'
+              : (view.percent ?? 0) >= 75
+                ? 'Getting full: a good moment to compact once this step is done.'
+                : 'Plenty of room.'}
+          </Text>
+        </Box>
+
+        {view.rateLimits.length > 0 && (
+          <Box flexDirection="column" rowGap={1}>
+            <Text weight="semibold">⟳ Plan limits</Text>
+            {view.rateLimits.map(r => (
+              <Text>
+                <Text color={r.percentUsed >= 90 ? 'error' : r.percentUsed >= 75 ? 'warning' : 'subtle'}>{bar(Math.min(r.percentUsed, 100) / 100, 16)}</Text>
+                {' '}{limitName[r.kind] ?? r.kind} {r.percentUsed}%
+                <Text dimColor>{r.resetsAt === undefined ? '' : ` · resets ${untilReset(r.resetsAt, view.now)}`}</Text>
+              </Text>
+            ))}
+            <Text dimColor>
+              Your plan's usage allowance across all your sessions, on rolling windows. When one fills, requests
+              slow or pause until it resets.
+            </Text>
           </Box>
         )}
       </Box>

@@ -1,7 +1,7 @@
 {
   "name": "workbench",
-  "version": "0.1.0",
-  "description": "Quiet productivity for Claude Code: a band that surfaces failing tests, uncommitted work and a filling context window; a guard on risky commands; a changed-files pane; and a cost/time status line.",
+  "version": "0.2.0",
+  "description": "Quiet productivity for Claude Code: a band that surfaces failing tests, uncommitted work and a filling context window; a guard on risky commands; a changed-files pane; and a usage chip that explains itself when clicked.",
   "author": { "name": "swperb", "url": "https://github.com/swperb" },
   "license": "MIT",
   "repository": "https://github.com/swperb/claude-code-themes",
