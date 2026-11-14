@@ -4,9 +4,9 @@
 Legible text, status colors you can't misread, surfaces that stay calm over a long
 session, and tools that stay quiet until something needs you.
 
-[![Watch the 27-second tour](docs/poster.png)](docs/clarity-showcase.mp4)
+[![Watch the 33-second tour](docs/poster.png)](docs/clarity-launch.mp4)
 
-<sub>▶ [Watch the 27-second tour](docs/clarity-showcase.mp4): real footage of a Claude Code session with Clarity installed.</sub>
+<sub>▶ [Watch the 33-second tour](docs/clarity-launch.mp4): real footage of a Claude Code session with Clarity installed.</sub>
 
 | A test fails | Every file Claude touched | Green, and what's left to commit |
 | --- | --- | --- |
