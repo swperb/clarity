@@ -8,13 +8,14 @@ long session. Every theme here is a small Claude Code plugin, installable in one
 | --- | --- |
 | [**Clarity**](themes/clarity) | High legibility, colorblind-safe status colors, standard diff colors, strong keyboard focus rings. Light and dark. |
 
-## Companion plugin
+## Companion plugins
 
 | Plugin | What it's for |
 | --- | --- |
 | [**Workbench**](plugins/workbench) | An attention band for failing tests, uncommitted work and a filling context window; a guard that asks before hard-to-undo commands; a changed-files pane; a time/cost status line. |
+| [**Studio**](plugins/studio) | A soft IDE beside the chat: the session folder's file tree, a live viewer that follows what Claude reads, edits, searches and runs, and an activity strip. |
 
-Install it the same way: `/plugin install workbench --marketplace swperb/claude-code-themes`.
+Install them the same way: `/plugin install workbench --marketplace swperb/claude-code-themes` (or `studio`).
 
 ## Install a theme
 
