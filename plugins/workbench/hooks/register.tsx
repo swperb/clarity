@@ -2,7 +2,19 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface as Engine, Register } from 'claude-code'
 
 import type { ChangedFile, Feature, Features, GitState, TestRun, UsageView } from '../types'
-import { countPatch, formatDuration, formatTokens, parseGitStatus, relativeTo, riskOf, testCommandOf, untilReset } from './lib'
+import {
+  classifyMcpTool,
+  countPatch,
+  formatDuration,
+  formatTokens,
+  isTestLast,
+  parseGitStatus,
+  relativeTo,
+  riskOf,
+  testCommandOf,
+  testOutcome,
+  untilReset,
+} from './lib'
 
 // ── State ───────────────────────────────────────────────────────────────────
 // Held by the host for the session, so a hot reload keeps it. Bump a `shape`
@@ -108,15 +120,19 @@ async function recordChange($: Engine, absolutePath: string, result: unknown, is
   const counted = countPatch(r.structuredPatch)
   // A brand-new file has no patch: count its lines as added.
   const fallbackAdds = isNew && counted.adds === 0 ? lineCount(content) : 0
-  const path = relativeTo(await $.session.cwd(), absolutePath)
+  await recordCounts($, absolutePath, counted.adds + fallbackAdds, counted.dels, isNew)
+}
+
+async function recordCounts($: Engine, somePath: string, adds: number, dels: number, isNew: boolean): Promise<void> {
+  const path = relativeTo(await $.session.cwd(), somePath)
   const at = await $.clock.now()
 
   await update($, files, list => {
     const old = list.find(f => f.path === path)
     const entry: ChangedFile = {
       path,
-      adds: (old?.adds ?? 0) + counted.adds + fallbackAdds,
-      dels: (old?.dels ?? 0) + counted.dels,
+      adds: (old?.adds ?? 0) + adds,
+      dels: (old?.dels ?? 0) + dels,
       edits: (old?.edits ?? 0) + 1,
       isNew: old?.isNew ?? isNew,
       at,
@@ -129,6 +145,20 @@ async function recordChange($: Engine, absolutePath: string, result: unknown, is
     void $.ui.open({ id: PANE, title: 'Changed files' })
   }
   void refreshGit($)
+}
+
+/** Records a test run from a shell command, judged by its output first (see testOutcome). */
+async function recordTestRun($: Engine, command: string, output: string | undefined, isError: boolean): Promise<void> {
+  const runner = testCommandOf(command)
+  if (runner === undefined) {
+    return
+  }
+  const outcome = testOutcome(output, isError, isTestLast(command))
+  if (outcome === undefined) {
+    return
+  }
+  const run: TestRun = { command: runner, isPassing: outcome === 'pass', at: await $.clock.now() }
+  await update($, tests, () => run)
 }
 
 // ── Register ────────────────────────────────────────────────────────────────
@@ -208,10 +238,42 @@ export const register: Register = on => {
     if (/\bgit\s/.test(e.command)) {
       void refreshGit($)
     }
-    const command = testCommandOf(e.command)
-    if (command !== undefined && ran.deny === undefined) {
-      const run: TestRun = { command, isPassing: ran.isError !== true, at: await $.clock.now() }
-      await update($, tests, () => run).catch(() => undefined)
+    if (ran.deny === undefined) {
+      await recordTestRun($, e.command, ran.text, ran.isError === true).catch(() => undefined)
+    }
+    return ran
+  })
+
+  // ── Tools from other MCP servers: file edits, shells and test runners ─────
+
+  on('tool.call', async ($, e, next) => {
+    const touch = classifyMcpTool(e.tool, e as unknown as Record<string, unknown>)
+    if (touch === undefined) {
+      return next(e)
+    }
+    const absolute = 'path' in touch && !touch.path.startsWith('/') ? `${await $.session.cwd()}/${touch.path}` : 'path' in touch ? touch.path : ''
+    const existed = touch.kind === 'write' ? await $.fs.exists(absolute).catch(() => true) : true
+    const ran = await next(e)
+    if (ran.deny !== undefined) {
+      return ran
+    }
+    const isError = ran.isError === true
+    try {
+      if (touch.kind === 'edit' && !isError && (await isOn($, 'changes'))) {
+        await recordCounts($, absolute, touch.adds, touch.dels, false)
+      } else if (touch.kind === 'write' && !isError && (await isOn($, 'changes'))) {
+        await recordCounts($, absolute, touch.adds, 0, !existed)
+      } else if (touch.kind === 'shell') {
+        await recordTestRun($, touch.command, ran.text, isError)
+      } else if (touch.kind === 'checks') {
+        const outcome = testOutcome(ran.text, isError, true)
+        if (outcome !== undefined) {
+          const run: TestRun = { command: touch.label, isPassing: outcome === 'pass', at: await $.clock.now() }
+          await update($, tests, () => run)
+        }
+      }
+    } catch {
+      // Bookkeeping never disturbs the tool call.
     }
     return ran
   })

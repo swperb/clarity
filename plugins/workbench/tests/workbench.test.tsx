@@ -120,3 +120,42 @@ test('the band carries a clickable usage chip, and the usage pane explains it', 
   expect((await pane.find({ type: 'Text', text: /5-hour window 34%/ })) !== undefined).toBe(true)
   await pane.unmount()
 })
+
+test('a failing run inside a compound command still reads as failing', async ($, on) => {
+  on('clock.now', () => ({ value: 1000 }))
+  on('ui.status', () => ({ value: undefined }))
+  // `ls; npm test; echo` exits 0 from `echo`; the runner's own summary says it failed.
+  on('tool.call', () => ({ result: {}, text: '# tests 1\n# pass 0\n# fail 1\n' }))
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine</Text>
+  })
+
+  await $.tool.call({ tool: 'Bash', command: 'ls -R src; npm test; echo done' })
+
+  const ui = await $.ui.mount(BAND)
+  expect((await ui.find({ type: 'Text', text: /Tests failing/ })) !== undefined).toBe(true)
+  await ui.unmount()
+})
+
+test('edits and checks through another MCP server are tracked too', async ($, on) => {
+  on('session.cwd', () => ({ value: '/work/app' }))
+  on('clock.now', () => ({ value: 1000 }))
+  on('ui.open', () => ({ value: { isPlaced: true } }))
+  on('fs.exists', () => ({ value: false }))
+  on('ui.status', () => ({ value: undefined }))
+  on('tool.call', (_, e) => (e.tool === 'mcp__runner__run_checks' ? { result: {}, text: 'All 7 tests: 7 passed' } : { result: {} }))
+
+  await $.tool.call({ tool: 'mcp__editor__edit', path: 'src/cart.js', old_string: 'a', new_string: 'b\nc' })
+  await $.tool.call({ tool: 'mcp__editor__write', path: 'src/discounts.js', content: 'x\ny\nz\n' })
+  await $.tool.call({ tool: 'mcp__runner__run_checks' })
+
+  const pane = await $.ui.mount(PANE)
+  expect((await pane.find({ type: 'Button', key: 'file:src/cart.js' })) !== undefined).toBe(true)
+  expect((await pane.find({ type: 'Button', key: 'file:src/discounts.js' }))?.text).toContain('new')
+  await pane.unmount()
+
+  const band = await $.ui.mount(BAND)
+  expect((await band.find({ type: 'Text', text: /Tests passing/ })) !== undefined).toBe(true)
+  await band.unmount()
+})

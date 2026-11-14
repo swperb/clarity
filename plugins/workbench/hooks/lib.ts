@@ -163,3 +163,63 @@ export function untilReset(iso: string, now: number): string {
   }
   return `in ${Math.round(hours / 24)} days`
 }
+
+// ── Test outcomes ───────────────────────────────────────────────────────────
+// A shell's exit code belongs to its LAST command, so `npm test; ls` exits 0
+// even when the tests failed. Read the runner's own summary first.
+
+const FAILED =
+  /^# fail [1-9]|\b[1-9]\d* (failed|failing|failures?)\b|^FAILED\b|test result: FAILED|Tests?:\s+[1-9]\d* failed|\bERR_ASSERTION\b|^not ok \d/im
+const PASSED = /^# fail 0\b|\b0 (failed|failures)\b|test result: ok|Tests?:\s+\d+ passed(?!.*failed)|\b\d+ passed\b|^ok \d/im
+
+/** Whether the test runner is the last command in the line, so the exit code is its own. */
+export function isTestLast(command: string): boolean {
+  const segments = command.split(/;|&&|\|\||\n/).map(s => s.trim()).filter(Boolean)
+  const last = segments[segments.length - 1] ?? ''
+  return testCommandOf(last.split('|')[0] ?? '') !== undefined
+}
+
+/** pass / fail from the output, else from the exit code when it's the runner's own; undefined if unknown. */
+export function testOutcome(output: string | undefined, isError: boolean, isExitCodeTheRunners: boolean): 'pass' | 'fail' | undefined {
+  const text = output ?? ''
+  if (FAILED.test(text)) {
+    return 'fail'
+  }
+  if (PASSED.test(text)) {
+    return 'pass'
+  }
+  return isExitCodeTheRunners ? (isError ? 'fail' : 'pass') : undefined
+}
+
+// ── Tools from any MCP server ───────────────────────────────────────────────
+// Recognised by name and input shape, so file and test tools from servers
+// other than the built-ins (an editor bridge, a job runner) still count.
+
+export type McpTouch =
+  | { kind: 'edit'; path: string; adds: number; dels: number }
+  | { kind: 'write'; path: string; adds: number }
+  | { kind: 'checks'; label: string }
+  | { kind: 'shell'; command: string }
+
+const lines = (s: unknown): number => (typeof s === 'string' && s !== '' ? s.split('\n').length - (s.endsWith('\n') ? 1 : 0) : 0)
+
+export function classifyMcpTool(tool: string, input: Record<string, unknown>): McpTouch | undefined {
+  if (!tool.startsWith('mcp__')) {
+    return undefined
+  }
+  const short = tool.split('__').pop()?.toLowerCase() ?? ''
+  const path = [input.path, input.file_path, input.filePath].find((p): p is string => typeof p === 'string')
+  if (path !== undefined && typeof input.old_string === 'string' && typeof input.new_string === 'string') {
+    return { kind: 'edit', path, adds: lines(input.new_string), dels: lines(input.old_string) }
+  }
+  if (path !== undefined && typeof input.content === 'string' && /write|create|save|put/.test(short)) {
+    return { kind: 'write', path, adds: lines(input.content) }
+  }
+  if (typeof input.command === 'string' && /bash|shell|exec|run|terminal/.test(short)) {
+    return { kind: 'shell', command: input.command }
+  }
+  if (/(^|_)(run_?)?(checks?|tests?)$/.test(short)) {
+    return { kind: 'checks', label: short.replace(/_/g, ' ') }
+  }
+  return undefined
+}
