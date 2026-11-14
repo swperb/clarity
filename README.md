@@ -4,6 +4,14 @@
 Legible text, status colors you can't misread, surfaces that stay calm over a long
 session, and tools that stay quiet until something needs you.
 
+[![Watch the 27-second tour](docs/poster.png)](docs/clarity-showcase.mp4)
+
+<sub>▶ [Watch the 27-second tour](docs/clarity-showcase.mp4): real footage of a Claude Code session with Clarity installed.</sub>
+
+| A test fails | Every file Claude touched | Green, and what's left to commit |
+| --- | --- | --- |
+| ![Workbench's band turns red when a test run fails, while Studio shows the project tree and activity](docs/screenshots/01-tests-failing.png) | ![The Changed files pane listing three files with exact added and removed line counts](docs/screenshots/02-changed-files.png) | ![The band shows tests passing and five uncommitted files, with a commit shortcut](docs/screenshots/03-all-green.png) |
+
 ## Install everything in one command
 
 ```bash
