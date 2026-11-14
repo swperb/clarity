@@ -5,7 +5,12 @@
     {
       "name": "clarity",
       "source": "./themes/clarity",
-      "description": "A calm, high-legibility theme for Claude Code Desktop: colorblind-safe status and diffs, strong focus rings, easy on the eyes for long sessions."
+      "description": "A calm, high-legibility theme for Claude Code Desktop: colorblind-safe status colors, strong focus rings, easy on the eyes for long sessions."
+    },
+    {
+      "name": "workbench",
+      "source": "./plugins/workbench",
+      "description": "Quiet productivity: an attention band for failing tests, uncommitted work and context fill; a risky-command guard; a changed-files pane; a cost/time status line."
     }
   ]
 }
