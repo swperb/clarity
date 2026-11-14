@@ -1,0 +1,11 @@
+{
+  "name": "claude-code-themes",
+  "owner": { "name": "swperb" },
+  "plugins": [
+    {
+      "name": "clarity",
+      "source": "./themes/clarity",
+      "description": "A calm, high-legibility theme for Claude Code Desktop: colorblind-safe status and diffs, strong focus rings, easy on the eyes for long sessions."
+    }
+  ]
+}

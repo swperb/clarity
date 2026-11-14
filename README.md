@@ -1,2 +1,56 @@
-# claude-code-themes
-Productivity-first themes for Claude Code Desktop: legible, colorblind-safe, one-line install.
+# Claude Code Themes
+
+Themes for the Claude Code desktop and mobile apps, built for getting work done:
+legible text, status colors you can't misread, and surfaces that stay calm over a
+long session. Every theme here is a small Claude Code plugin, installable in one line.
+
+| Theme | What it's for |
+| --- | --- |
+| [**Clarity**](themes/clarity) | High legibility, colorblind-safe status and diffs, strong keyboard focus rings. Light and dark. |
+
+## Install a theme
+
+At the prompt of a Claude Code terminal session:
+
+```
+/plugin install clarity --marketplace swperb/claude-code-themes
+```
+
+Answer `y` to add the marketplace, then pick a scope (user scope applies it everywhere).
+
+From a shell:
+
+```bash
+claude plugin install clarity --marketplace swperb/claude-code-themes
+```
+
+In the desktop app: click **+** next to the prompt box → **Plugins** → **Add marketplace**
+with `swperb/claude-code-themes` → **Add plugin**.
+
+The theme applies to new sessions in the desktop and mobile apps. Terminals and
+editors keep their own colors. To go back to the default look, uninstall or disable the plugin.
+
+## What every theme here must do
+
+Looking good is the easy part. A theme in this repo also has to:
+
+1. **Keep words readable.** Primary text at 7:1 contrast or better on every surface;
+   muted text at 4.5:1 or better.
+2. **Keep meaning.** Danger reads as red, success as green, warning as amber, and they
+   stay distinguishable for people with color-vision deficiency (differ in lightness,
+   not just hue). Diff additions and removals follow the same rule.
+3. **Work in both light and dark**, unless the idea only makes sense in one.
+4. **Not trip the app's own checks.** `makeColors` reports contrast problems; no line
+   may start with `Desktop won't paint`, or the app ignores the theme.
+
+## Add a theme
+
+1. Copy `themes/clarity` to `themes/<your-theme>` and rename it in its `.claude-plugin/plugin.json`.
+2. Edit the colors in `hooks/palette.js`. Leave `make-colors.js` as it is.
+3. Check contrast: `node -e "import('./themes/<your-theme>/hooks/palette.js').then(m => console.log(m.clarity().problems.join('\n')))"`
+4. Validate: `claude plugin validate themes/<your-theme>`
+5. Add an entry to `.claude-plugin/marketplace.json` and a row to the table above.
+
+## License
+
+MIT

@@ -1,0 +1,8 @@
+{
+  "name": "clarity",
+  "version": "0.1.0",
+  "description": "A calm, high-legibility theme for Claude Code Desktop: colorblind-safe status and diffs, strong focus rings, easy on the eyes for long sessions.",
+  "author": { "name": "swperb", "url": "https://github.com/swperb" },
+  "license": "MIT",
+  "repository": "https://github.com/swperb/claude-code-themes"
+}
