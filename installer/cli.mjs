@@ -7,6 +7,9 @@ import { fileURLToPath } from 'node:url'
 
 import {
   HELP,
+  LEGACY_MARKETPLACE,
+  legacySteps,
+  readLegacy,
   SOURCE,
   commandFor,
   initialSelection,
@@ -150,6 +153,10 @@ async function main() {
   const catalog = readCatalog(ROOT)
   const listed = claude(['plugin', 'list', '--json'], { quiet: true })
   const state = readState(listed.status === 0 ? listed.stdout : '[]', catalog.marketplace)
+  const legacy = readLegacy(listed.status === 0 ? listed.stdout : '[]')
+  if (legacy.length > 0) {
+    console.log(dim(`Found ${legacy.length} plugin(s) installed under the old name "${LEGACY_MARKETPLACE}"; they move to "${catalog.marketplace}".`))
+  }
 
   if (args.list) {
     for (const p of catalog.plugins) {
@@ -171,23 +178,23 @@ async function main() {
   } else if (args.only) {
     selected = new Set(args.only)
   } else if (tty) {
-    console.log(`\n${bold('Claude Code suite')} ${dim(`· ${SOURCE}`)}\n`)
-    selected = await pick(catalog, state, initialSelection(catalog, state))
+    console.log(`\n${bold('Clarity')} ${dim(`· ${SOURCE}`)}\n`)
+    selected = await pick(catalog, state, initialSelection(catalog, state, legacy))
     if (selected === undefined) {
       console.log(dim('Nothing changed.'))
       return
     }
   } else {
-    selected = initialSelection(catalog, state) // Not a terminal: first run installs everything.
+    selected = initialSelection(catalog, state, legacy) // Not a terminal: first run installs everything.
   }
 
-  const steps = plan(catalog, state, selected, { remove: args.remove })
+  const steps = [...plan(catalog, state, selected, { remove: args.remove }), ...legacySteps(legacy)]
   if (steps.length === 0) {
     console.log(green('✓ Already set up that way. Nothing to change.'))
     return
   }
 
-  const verbs = { install: green('install'), enable: green('enable'), disable: dim('disable'), uninstall: red('uninstall') }
+  const verbs = { install: green('install'), enable: green('enable'), disable: dim('disable'), uninstall: red('uninstall'), 'uninstall-legacy': dim('remove old copy of') }
   console.log(`\n${bold('Plan')} ${dim(`(scope: ${args.scope})`)}`)
   steps.forEach(s => console.log(`  ${verbs[s.action]} ${s.name}`))
 
@@ -214,13 +221,24 @@ async function main() {
 
   let failed = 0
   for (const step of steps) {
+    // Old-name copies are removed only once every new install has worked,
+    // so a failure never leaves you with neither.
+    if (step.action === 'uninstall-legacy' && failed > 0) {
+      console.log(dim(`· kept old copy of ${step.name} (an install above failed)`))
+      continue
+    }
     const run = claude(commandFor(step, catalog.marketplace, args.scope), { quiet: true })
+    const label = step.action === 'uninstall-legacy' ? `removed old ${step.id}` : `${step.action} ${step.name}`
     if (run.status === 0) {
-      console.log(`${green('✓')} ${step.action} ${step.name}`)
+      console.log(`${green('✓')} ${label}`)
     } else {
       failed += 1
-      console.log(`${red('✗')} ${step.action} ${step.name}\n${dim((run.stderr || run.stdout).trim())}`)
+      console.log(`${red('✗')} ${label}\n${dim((run.stderr || run.stdout).trim())}`)
     }
+  }
+  if (legacy.length > 0 && failed === 0) {
+    const removed = claude(['plugin', 'marketplace', 'remove', LEGACY_MARKETPLACE], { quiet: true })
+    console.log(removed.status === 0 ? `${green('✓')} removed old marketplace ${LEGACY_MARKETPLACE}` : dim(`· old marketplace ${LEGACY_MARKETPLACE} left in place`))
   }
 
   console.log(

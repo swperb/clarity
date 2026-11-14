@@ -1,13 +1,13 @@
 {
-  "name": "claude-code-suite",
+  "name": "clarity",
   "version": "0.1.0",
-  "description": "Installer for a suite of Claude Code themes and plugins: install everything in one command, or pick.",
+  "description": "Clarity for Claude Code: a theme and plugins that make long sessions calmer and more productive. One-command installer.",
   "type": "module",
-  "bin": { "claude-code-suite": "installer/cli.mjs" },
+  "bin": { "clarity": "installer/cli.mjs" },
   "scripts": { "test": "node --test installer/" },
   "files": ["installer/", ".claude-plugin/marketplace.json"],
   "engines": { "node": ">=18" },
-  "repository": "github:swperb/claude-code-themes",
+  "repository": "github:swperb/clarity",
   "license": "MIT",
   "private": true
 }

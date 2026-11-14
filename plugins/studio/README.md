@@ -6,7 +6,7 @@ the search it ran, the command and whether it passed. It never edits anything
 itself, and it stays quiet: no toasts, no sounds, the app's own diff colors.
 
 ```
-/plugin install studio --marketplace swperb/claude-code-themes
+/plugin install studio --marketplace swperb/clarity
 ```
 
 ## What you get
@@ -60,7 +60,7 @@ chat. Close it and it stays closed until you run `/studio` again.
 - Studio is about where Claude is *now*. For the full list of files changed this session, use
   [Workbench](../workbench)'s `/changes` pane; for time, cost and context, its `/usage-info` pane.
   Studio doesn't repeat either.
-- Pairs well with the [Clarity](../../themes/clarity) theme; works with any theme.
+- Pairs well with the [Clarity](../../themes/clarity-theme) theme; works with any theme.
 
 ## License
 

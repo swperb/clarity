@@ -1,11 +1,11 @@
 # Workbench
 
 Quiet productivity for Claude Code. Workbench stays out of the way until something
-needs you, then says so plainly. It pairs with the [Clarity](../../themes/clarity) theme
+needs you, then says so plainly. It pairs with the [Clarity](../../themes/clarity-theme) theme
 but works with any theme.
 
 ```
-/plugin install workbench --marketplace swperb/claude-code-themes
+/plugin install workbench --marketplace swperb/clarity
 ```
 
 ## What you get

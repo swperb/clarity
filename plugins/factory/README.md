@@ -6,7 +6,7 @@ waiting on you, what each costs, and when two of them are about to edit the same
 It stays quiet until something needs you.
 
 ```
-/plugin install factory --marketplace swperb/claude-code-themes
+/plugin install factory --marketplace swperb/clarity
 ```
 
 Install it at the user scope so every session joins the floor.

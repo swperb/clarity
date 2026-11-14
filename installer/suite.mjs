@@ -2,8 +2,30 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-export const SOURCE = 'swperb/claude-code-themes'
+export const SOURCE = 'swperb/clarity'
 export const SCOPES = ['user', 'project', 'local']
+
+// The suite was first published as the `claude-code-themes` marketplace, with
+// the theme named `clarity`. Installs under those names move to the new ones.
+export const LEGACY_MARKETPLACE = 'claude-code-themes'
+const LEGACY_RENAMES = { clarity: 'clarity-theme' }
+
+/** Plugins installed from the old marketplace: { id, name (current name), enabled, scope }. */
+export function readLegacy(listJson) {
+  const found = []
+  for (const entry of JSON.parse(listJson || '[]')) {
+    const [old, market] = String(entry.id ?? '').split('@')
+    if (market === LEGACY_MARKETPLACE && old) {
+      found.push({ id: entry.id, name: LEGACY_RENAMES[old] ?? old, enabled: entry.enabled !== false, scope: entry.scope })
+    }
+  }
+  return found
+}
+
+/** Steps that uninstall the old-name copies, run after the new ones are installed. */
+export function legacySteps(legacy) {
+  return legacy.map(l => ({ action: 'uninstall-legacy', name: l.name, id: l.id, scope: l.scope }))
+}
 
 /** The plugins this repo offers, from its marketplace file. */
 export function readCatalog(root) {
@@ -54,12 +76,19 @@ export function plan(catalog, state, selected, { remove = false } = {}) {
 
 /** The `claude` argument vector for one step. */
 export function commandFor(step, marketplace, scope) {
+  if (step.action === 'uninstall-legacy') {
+    return ['plugin', 'uninstall', step.id, '--scope', step.scope && step.scope !== 'synced' ? step.scope : scope]
+  }
   const id = `${step.name}@${marketplace}`
   return ['plugin', step.action, id, '--scope', scope]
 }
 
 /** What starts checked in the picker: everything on a first install, else what's enabled now. */
-export function initialSelection(catalog, state) {
+export function initialSelection(catalog, state, legacy = []) {
+  if (legacy.length > 0 && state.size === 0) {
+    // Moving from the old names: keep exactly what was enabled there.
+    return new Set(legacy.filter(l => l.enabled).map(l => l.name).filter(n => catalog.plugins.some(p => p.name === n)))
+  }
   const enabled = catalog.plugins.filter(p => state.get(p.name)?.enabled).map(p => p.name)
   return new Set(state.size === 0 ? catalog.plugins.map(p => p.name) : enabled)
 }
@@ -70,7 +99,7 @@ export function themeConflict(catalog, selected) {
   return themes.length > 1 ? themes : undefined
 }
 
-export const HELP = `Claude Code suite installer
+export const HELP = `Clarity installer
 
   npx github:${SOURCE}                 pick what to install (everything is checked)
   npx github:${SOURCE} config          change what's installed later (same picker)

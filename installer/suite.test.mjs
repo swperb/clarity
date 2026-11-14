@@ -6,13 +6,13 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 
-import { initialSelection, parseArgs, plan, readCatalog, readState, themeConflict } from './suite.mjs'
+import { commandFor, initialSelection, legacySteps, parseArgs, plan, readCatalog, readLegacy, readState, themeConflict } from './suite.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const catalog = {
-  marketplace: 'claude-code-themes',
+  marketplace: 'clarity',
   plugins: [
-    { name: 'clarity', kind: 'theme', description: '' },
+    { name: 'clarity-theme', kind: 'theme', description: '' },
     { name: 'workbench', kind: 'plugin', description: '' },
     { name: 'factory', kind: 'plugin', description: '' },
   ],
@@ -20,50 +20,50 @@ const catalog = {
 
 test('reads the real catalog from the marketplace file', () => {
   const real = readCatalog(ROOT)
-  assert.equal(real.marketplace, 'claude-code-themes')
-  assert.ok(real.plugins.some(p => p.name === 'clarity' && p.kind === 'theme'))
+  assert.equal(real.marketplace, 'clarity')
+  assert.ok(real.plugins.some(p => p.name === 'clarity-theme' && p.kind === 'theme'))
   assert.ok(real.plugins.some(p => p.name === 'workbench' && p.kind === 'plugin'))
 })
 
 test('reads only this marketplace from claude plugin list', () => {
   const state = readState(
     JSON.stringify([
-      { id: 'clarity@claude-code-themes', enabled: true, scope: 'user' },
-      { id: 'workbench@claude-code-themes', enabled: false, scope: 'user' },
+      { id: 'clarity-theme@clarity', enabled: true, scope: 'user' },
+      { id: 'workbench@clarity', enabled: false, scope: 'user' },
       { id: 'sleepwalk@sleepwalk', enabled: true },
     ]),
-    'claude-code-themes',
+    'clarity',
   )
-  assert.deepEqual([...state.keys()], ['clarity', 'workbench'])
+  assert.deepEqual([...state.keys()], ['clarity-theme', 'workbench'])
   assert.equal(state.get('workbench').enabled, false)
 })
 
 test('first run selects everything; later runs reflect what is enabled', () => {
-  assert.deepEqual([...initialSelection(catalog, new Map())], ['clarity', 'workbench', 'factory'])
-  const state = new Map([['clarity', { installed: true, enabled: true }], ['workbench', { installed: true, enabled: false }]])
-  assert.deepEqual([...initialSelection(catalog, state)], ['clarity'])
+  assert.deepEqual([...initialSelection(catalog, new Map())], ['clarity-theme', 'workbench', 'factory'])
+  const state = new Map([['clarity-theme', { installed: true, enabled: true }], ['workbench', { installed: true, enabled: false }]])
+  assert.deepEqual([...initialSelection(catalog, state)], ['clarity-theme'])
 })
 
 test('plans installs, enables, disables, and uninstalls only with --remove', () => {
   const state = new Map([
-    ['clarity', { installed: true, enabled: true }],
+    ['clarity-theme', { installed: true, enabled: true }],
     ['workbench', { installed: true, enabled: false }],
   ])
   const selected = new Set(['workbench', 'factory'])
   assert.deepEqual(plan(catalog, state, selected), [
-    { action: 'disable', name: 'clarity' },
+    { action: 'disable', name: 'clarity-theme' },
     { action: 'enable', name: 'workbench' },
     { action: 'install', name: 'factory' },
   ])
   assert.deepEqual(plan(catalog, state, new Set(), { remove: true }), [
-    { action: 'uninstall', name: 'clarity' },
+    { action: 'uninstall', name: 'clarity-theme' },
     { action: 'uninstall', name: 'workbench' },
   ])
-  assert.deepEqual(plan(catalog, state, new Set(['clarity'])), [])
+  assert.deepEqual(plan(catalog, state, new Set(['clarity-theme'])), [])
 })
 
 test('parses flags and refuses bad ones', () => {
-  assert.deepEqual(parseArgs(['--only', 'clarity, workbench', '--scope', 'project']).only, ['clarity', 'workbench'])
+  assert.deepEqual(parseArgs(['--only', 'clarity-theme, workbench', '--scope', 'project']).only, ['clarity-theme', 'workbench'])
   assert.equal(parseArgs(['config']).command, 'config')
   assert.throws(() => parseArgs(['--scope', 'everywhere']), /--scope must be/)
   assert.throws(() => parseArgs(['--all', '--only', 'x']), /not both/)
@@ -72,8 +72,8 @@ test('parses flags and refuses bad ones', () => {
 
 test('warns when two themes are selected', () => {
   const two = { ...catalog, plugins: [...catalog.plugins, { name: 'paper', kind: 'theme', description: '' }] }
-  assert.deepEqual(themeConflict(two, new Set(['clarity', 'paper'])), ['clarity', 'paper'])
-  assert.equal(themeConflict(two, new Set(['clarity'])), undefined)
+  assert.deepEqual(themeConflict(two, new Set(['clarity-theme', 'paper'])), ['clarity-theme', 'paper'])
+  assert.equal(themeConflict(two, new Set(['clarity-theme'])), undefined)
 })
 
 test('end to end against a fake claude: adds the marketplace, then installs what was asked', () => {
@@ -94,7 +94,21 @@ test('end to end against a fake claude: adds the marketplace, then installs what
   assert.deepEqual(calls, [
     'plugin list --json',
     'plugin marketplace list --json',
-    'plugin marketplace add swperb/claude-code-themes',
-    'plugin install workbench@claude-code-themes --scope user',
+    'plugin marketplace add swperb/clarity',
+    'plugin install workbench@clarity --scope user',
   ])
+})
+
+test('moves installs from the old claude-code-themes names to clarity', () => {
+  const list = JSON.stringify([
+    { id: 'clarity@claude-code-themes', enabled: true, scope: 'user' },
+    { id: 'workbench@claude-code-themes', enabled: false, scope: 'user' },
+    { id: 'sleepwalk@sleepwalk', enabled: true },
+  ])
+  const legacy = readLegacy(list)
+  assert.deepEqual(legacy.map(l => l.name), ['clarity-theme', 'workbench'])
+  // Keeps exactly what was enabled before: the theme, not the disabled workbench.
+  assert.deepEqual([...initialSelection(catalog, new Map(), legacy)], ['clarity-theme'])
+  const steps = legacySteps(legacy)
+  assert.deepEqual(commandFor(steps[0], 'clarity', 'user'), ['plugin', 'uninstall', 'clarity@claude-code-themes', '--scope', 'user'])
 })

@@ -1,13 +1,13 @@
-# Claude Code Themes
+# Clarity
 
-A suite of themes and plugins for Claude Code, built for getting work done:
-legible text, status colors you can't misread, surfaces that stay calm over a long
+**Clarity for Claude Code**: a theme and three plugins, built for getting work done.
+Legible text, status colors you can't misread, surfaces that stay calm over a long
 session, and tools that stay quiet until something needs you.
 
 ## Install everything in one command
 
 ```bash
-npx github:swperb/claude-code-themes
+npx github:swperb/clarity
 ```
 
 A picker opens with everything checked. Press Enter to install it all, or uncheck what you
@@ -18,17 +18,17 @@ Claude Code session.
 disables a plugin (its data is kept), checking turns it back on:
 
 ```bash
-npx github:swperb/claude-code-themes config
+npx github:swperb/clarity config
 ```
 
 For scripts and dotfiles:
 
 ```bash
-npx github:swperb/claude-code-themes --all --yes
+npx github:swperb/clarity --all --yes
 ```
 
 ```bash
-npx github:swperb/claude-code-themes --only clarity,workbench --scope project
+npx github:swperb/clarity --only clarity-theme,workbench --scope project
 ```
 
 `--list` shows what's available and installed, `--dry-run` prints the `claude plugin`
@@ -40,7 +40,7 @@ only runs `claude plugin …` commands you could run yourself.
 
 | | What it's for |
 | --- | --- |
-| [**Clarity**](themes/clarity) · theme | High legibility, colorblind-safe status colors, standard diff colors, strong keyboard focus rings. Light and dark. |
+| [**Clarity theme**](themes/clarity-theme) · theme | High legibility, colorblind-safe status colors, standard diff colors, strong keyboard focus rings. Light and dark. |
 | [**Workbench**](plugins/workbench) · plugin | An attention band for failing tests, uncommitted work and a filling context window; a guard that asks before hard-to-undo commands; a changed-files pane; a usage chip that explains time, cost and context when clicked. |
 | [**Factory**](plugins/factory) · plugin | One control room for many sessions across many projects: a factory-floor pane, a needs-you queue with one batched notification, a per-project color tint, and a radar for two sessions editing the same file. |
 | [**Studio**](plugins/studio) · plugin | A soft IDE beside the chat: the session folder's file tree and a live viewer that follows what Claude reads, edits, searches and runs, with an activity strip. |
@@ -52,7 +52,7 @@ Each plugin also has its own in-session settings, for example `/workbench guard 
 At the prompt of a Claude Code terminal session:
 
 ```
-/plugin install clarity --marketplace swperb/claude-code-themes
+/plugin install clarity-theme --marketplace swperb/clarity
 ```
 
 Answer `y` to add the marketplace, then pick a scope (user scope applies it everywhere).
@@ -60,11 +60,11 @@ Answer `y` to add the marketplace, then pick a scope (user scope applies it ever
 From a shell:
 
 ```bash
-claude plugin install workbench --marketplace swperb/claude-code-themes
+claude plugin install workbench --marketplace swperb/clarity
 ```
 
 In the desktop app: click **+** next to the prompt box → **Plugins** → **Add marketplace**
-with `swperb/claude-code-themes` → **Add plugin**.
+with `swperb/clarity` → **Add plugin**.
 
 Themes apply to the desktop and mobile apps; terminals and editors keep their own colors.
 
@@ -85,7 +85,7 @@ Looking good is the easy part. A theme in this repo also has to:
 
 ## Add a theme or plugin
 
-1. Copy `themes/clarity` (or `plugins/workbench`) to a new folder and rename it in its `.claude-plugin/plugin.json`.
+1. Copy `themes/clarity-theme` (or `plugins/workbench`) to a new folder and rename it in its `.claude-plugin/plugin.json`.
 2. For a theme, edit the colors in `hooks/palette.js` and leave `make-colors.js` as it is.
    Check contrast: `node -e "import('./themes/<your-theme>/hooks/palette.js').then(m => console.log(m.clarity().problems.join('\n')))"`
 3. Validate: `claude plugin validate <folder>`

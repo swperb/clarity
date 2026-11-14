@@ -1,9 +1,9 @@
-# Clarity
+# Clarity theme
 
 A theme for Claude Code Desktop that's built to make long working sessions easier.
 
 ```
-/plugin install clarity --marketplace swperb/claude-code-themes
+/plugin install clarity-theme --marketplace swperb/clarity
 ```
 
 ## What it does for you
