@@ -131,3 +131,35 @@ export function formatDuration(ms: number): string {
   }
   return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m`
 }
+
+/** "56k", "1.2M", "820". */
+export function formatTokens(n: number): string {
+  if (n >= 1_000_000) {
+    return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
+  }
+  if (n >= 1000) {
+    return `${Math.round(n / 1000)}k`
+  }
+  return String(n)
+}
+
+/** "in 2h 10m" until an ISO timestamp, from `now` in milliseconds. */
+export function untilReset(iso: string, now: number): string {
+  const at = Date.parse(iso)
+  if (Number.isNaN(at)) {
+    return 'soon'
+  }
+  const ms = at - now
+  if (ms <= 0) {
+    return 'now'
+  }
+  const minutes = Math.ceil(ms / 60000)
+  if (minutes < 60) {
+    return `in ${minutes}m`
+  }
+  const hours = Math.floor(minutes / 60)
+  if (hours < 48) {
+    return `in ${hours}h ${String(minutes % 60).padStart(2, '0')}m`
+  }
+  return `in ${Math.round(hours / 24)} days`
+}

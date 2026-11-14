@@ -1,0 +1,13 @@
+{
+  "name": "claude-code-suite",
+  "version": "0.1.0",
+  "description": "Installer for a suite of Claude Code themes and plugins: install everything in one command, or pick.",
+  "type": "module",
+  "bin": { "claude-code-suite": "installer/cli.mjs" },
+  "scripts": { "test": "node --test installer/" },
+  "files": ["installer/", ".claude-plugin/marketplace.json"],
+  "engines": { "node": ">=18" },
+  "repository": "github:swperb/claude-code-themes",
+  "license": "MIT",
+  "private": true
+}

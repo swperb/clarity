@@ -29,7 +29,16 @@ GitHub repo and more. Everyday commands like `rm -rf node_modules` or
 Click a file to mention it in your next message; **Review all** drafts a review request
 for every changed file. Opens itself on the first edit; reopen with `/changes`.
 
-**Status line.** `⏱ 23m · $1.42 · 41% context`: session time, cost and context use at a glance.
+**Usage chip, explained.** `⏱ 23m · $1.42 · 41% context ⓘ` sits at the right of the band.
+Click it (or run `/usage-info`) for the **Session usage** pane, which says what each figure means
+in plain words:
+- **Time:** how long the session has been open.
+- **Cost:** the session's total at API prices (what `/cost` shows) and the hourly rate.
+  On a subscription it's a measure of your usage, not a separate bill.
+- **Context:** how full Claude's working memory is, what's filling it (conversation,
+  files read, tools, memory files), what happens when it fills (compaction), and
+  **Compact…** / **Full breakdown** buttons.
+- **Plan limits:** your 5-hour and 7-day usage windows and when each resets.
 
 ## Settings
 
@@ -39,11 +48,12 @@ for every changed file. Opens itself on the first edit; reopen with `/changes`.
 /workbench guard on
 ```
 
-Features: `band`, `guard`, `changes`, `status`.
+Features: `band`, `guard`, `changes`, `usage`, and `status` (a plain status-line copy of the
+usage figures, off by default because a status line can't be clicked).
 
 ## Notes
 
-- The band, pane and status line draw in the desktop app and in the terminal.
+- The band and panes draw in the desktop app and in the terminal.
 - The guard adds a prompt; it never removes one. If your settings already deny a command, it stays denied.
 - Changed files are the ones Claude edits with its file tools. Changes made by shell commands aren't tracked.
 

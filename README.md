@@ -1,23 +1,52 @@
 # Claude Code Themes
 
-Themes for the Claude Code desktop and mobile apps, built for getting work done:
-legible text, status colors you can't misread, and surfaces that stay calm over a
-long session. Every theme here is a small Claude Code plugin, installable in one line.
+A suite of themes and plugins for Claude Code, built for getting work done:
+legible text, status colors you can't misread, surfaces that stay calm over a long
+session, and tools that stay quiet until something needs you.
 
-| Theme | What it's for |
+## Install everything in one command
+
+```bash
+npx github:swperb/claude-code-themes
+```
+
+A picker opens with everything checked. Press Enter to install it all, or uncheck what you
+don't want first (↑/↓ or j/k move, space toggles, `a` all, `n` none). Then start a new
+Claude Code session.
+
+**Change your picks later** with the same picker. It shows what's installed; unchecking
+disables a plugin (its data is kept), checking turns it back on:
+
+```bash
+npx github:swperb/claude-code-themes config
+```
+
+For scripts and dotfiles:
+
+```bash
+npx github:swperb/claude-code-themes --all --yes
+```
+
+```bash
+npx github:swperb/claude-code-themes --only clarity,workbench --scope project
+```
+
+`--list` shows what's available and installed, `--dry-run` prints the `claude plugin`
+commands without running them, and `--remove` uninstalls what you uncheck instead of
+disabling it. The installer needs Node 18+ and Claude Code; it has no dependencies and
+only runs `claude plugin …` commands you could run yourself.
+
+## What's in the suite
+
+| | What it's for |
 | --- | --- |
-| [**Clarity**](themes/clarity) | High legibility, colorblind-safe status colors, standard diff colors, strong keyboard focus rings. Light and dark. |
+| [**Clarity**](themes/clarity) · theme | High legibility, colorblind-safe status colors, standard diff colors, strong keyboard focus rings. Light and dark. |
+| [**Workbench**](plugins/workbench) · plugin | An attention band for failing tests, uncommitted work and a filling context window; a guard that asks before hard-to-undo commands; a changed-files pane; a usage chip that explains time, cost and context when clicked. |
+| [**Factory**](plugins/factory) · plugin | One control room for many sessions across many projects: a factory-floor pane, a needs-you queue with one batched notification, a per-project color tint, and a radar for two sessions editing the same file. |
 
-## Companion plugins
+Each plugin also has its own in-session settings, for example `/workbench guard off`.
 
-| Plugin | What it's for |
-| --- | --- |
-| [**Workbench**](plugins/workbench) | An attention band for failing tests, uncommitted work and a filling context window; a guard that asks before hard-to-undo commands; a changed-files pane; a time/cost status line. |
-| [**Factory**](plugins/factory) | One control room for many sessions across many projects: a factory-floor pane, a needs-you queue with one batched notification, a per-project color tint, and a radar for two sessions editing the same file. |
-
-Install them the same way: `/plugin install workbench --marketplace swperb/claude-code-themes`.
-
-## Install a theme
+## Install one at a time
 
 At the prompt of a Claude Code terminal session:
 
@@ -30,14 +59,13 @@ Answer `y` to add the marketplace, then pick a scope (user scope applies it ever
 From a shell:
 
 ```bash
-claude plugin install clarity --marketplace swperb/claude-code-themes
+claude plugin install workbench --marketplace swperb/claude-code-themes
 ```
 
 In the desktop app: click **+** next to the prompt box → **Plugins** → **Add marketplace**
 with `swperb/claude-code-themes` → **Add plugin**.
 
-The theme applies to new sessions in the desktop and mobile apps. Terminals and
-editors keep their own colors. To go back to the default look, uninstall or disable the plugin.
+Themes apply to the desktop and mobile apps; terminals and editors keep their own colors.
 
 ## What every theme here must do
 
@@ -54,13 +82,15 @@ Looking good is the easy part. A theme in this repo also has to:
 5. **Not trip the app's own checks.** `makeColors` reports contrast problems; no line
    may start with `Desktop won't paint`, or the app ignores the theme.
 
-## Add a theme
+## Add a theme or plugin
 
-1. Copy `themes/clarity` to `themes/<your-theme>` and rename it in its `.claude-plugin/plugin.json`.
-2. Edit the colors in `hooks/palette.js`. Leave `make-colors.js` as it is.
-3. Check contrast: `node -e "import('./themes/<your-theme>/hooks/palette.js').then(m => console.log(m.clarity().problems.join('\n')))"`
-4. Validate: `claude plugin validate themes/<your-theme>`
-5. Add an entry to `.claude-plugin/marketplace.json` and a row to the table above.
+1. Copy `themes/clarity` (or `plugins/workbench`) to a new folder and rename it in its `.claude-plugin/plugin.json`.
+2. For a theme, edit the colors in `hooks/palette.js` and leave `make-colors.js` as it is.
+   Check contrast: `node -e "import('./themes/<your-theme>/hooks/palette.js').then(m => console.log(m.clarity().problems.join('\n')))"`
+3. Validate: `claude plugin validate <folder>`
+4. Add an entry to `.claude-plugin/marketplace.json` and a row to the table above.
+   The installer picks up new entries on its own.
+5. Run the installer's tests: `npm test`.
 
 ## License
 
