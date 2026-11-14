@@ -137,12 +137,16 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     const saved = (await $.store.get(STORE_KEY)) as Partial<Features> | undefined
     await update($, features, () => ({ ...ALL_ON, ...(saved ?? {}) }))
-    await $.command.register({
-      name: 'workbench',
-      description: 'Show or switch Workbench features: /workbench [band|guard|changes|status] [on|off]',
-    })
-    await $.command.register({ name: 'changes', description: 'Open the pane of files Claude changed this session' })
-    await $.command.register({ name: 'usage', description: 'What this session has used so far: time, cost, context, limits, explained' })
+    // One at a time: a name the app or another plugin already holds is
+    // refused, and that must never stop the rest of Workbench from starting.
+    const commands = [
+      { name: 'workbench', description: 'Show or switch Workbench features: /workbench [band|guard|changes|usage|status] [on|off]' },
+      { name: 'changes', description: 'Open the pane of files Claude changed this session' },
+      { name: 'usage-info', description: 'What this session has used so far (time, cost, context, plan limits), explained' },
+    ]
+    for (const command of commands) {
+      await $.command.register(command).catch(error => $.ui.log(`workbench: /${command.name} unavailable: ${String(error)}`))
+    }
     void refreshGit($)
     void refreshStatus($)
     return next(e)
@@ -176,7 +180,7 @@ export const register: Register = on => {
     return { text: 'Opened the Changed files pane.' }
   })
 
-  on('command.run', { command: 'usage' }, async $ => {
+  on('command.run', { command: 'usage-info' }, async $ => {
     await openUsage($)
     return { text: 'Opened the Session usage pane.' }
   })

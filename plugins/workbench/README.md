@@ -30,7 +30,7 @@ Click a file to mention it in your next message; **Review all** drafts a review 
 for every changed file. Opens itself on the first edit; reopen with `/changes`.
 
 **Usage chip, explained.** `⏱ 23m · $1.42 · 41% context ⓘ` sits at the right of the band.
-Click it (or run `/usage`) for the **Session usage** pane, which says what each figure means
+Click it (or run `/usage-info`) for the **Session usage** pane, which says what each figure means
 in plain words:
 - **Time:** how long the session has been open.
 - **Cost:** the session's total at API prices (what `/cost` shows) and the hourly rate.
