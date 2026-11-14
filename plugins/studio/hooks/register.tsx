@@ -314,10 +314,13 @@ export const register: Register = on => {
     if (e.surface === 'desktop') {
       await update($, canDock, () => true)
     }
-    await $.command.register({
-      name: 'studio',
-      description: 'Open Studio, a file tree and live viewer that follows Claude: /studio [auto on|off]',
-    })
+    // A refused name must not skip the rest of startup.
+    await $.command
+      .register({
+        name: 'studio',
+        description: 'Open Studio, a file tree and live viewer that follows Claude: /studio [auto on|off]',
+      })
+      .catch(() => undefined)
     await refreshInfo($).catch(() => undefined)
     await loadDir($, '.').catch(() => undefined)
     return next(e)

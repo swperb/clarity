@@ -57,7 +57,10 @@ chat. Close it and it stays closed until you run `/studio` again.
 - Studio reads files only to show them, through Claude Code's own file API, and only when you click.
 - Edit counts come from Claude's file tools. Changes made by shell commands aren't counted, though the tree refreshes after every turn so new files show.
 - Large files show their first 1,500 lines; binary files and files over 2 MB aren't shown.
-- Pairs well with [Workbench](../workbench) and the [Clarity](../../themes/clarity) theme; works with any theme.
+- Studio is about where Claude is *now*. For the full list of files changed this session, use
+  [Workbench](../workbench)'s `/changes` pane; for time, cost and context, its `/usage-info` pane.
+  Studio doesn't repeat either.
+- Pairs well with the [Clarity](../../themes/clarity) theme; works with any theme.
 
 ## License
 
