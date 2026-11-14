@@ -59,6 +59,7 @@ ago, are deleted the next time a session starts. Nothing leaves your machine.
 ## Notes
 
 - Only sessions running Factory appear on the floor.
+- The floor's cost and context figures are a one-line summary per session. For what they mean and what is filling a session's context, open that session's **Session usage** pane from [Workbench](../workbench) (`/usage-info`).
 - "Waiting on you" means the turn ended. A session paused on a permission prompt still shows as working.
 - The tint replaces any other color theme (Clarity included) for as long as it's on. Run `/factory tint off` to keep your theme.
 - Edits are the ones Claude makes with its file tools. Changes made by shell commands aren't tracked.

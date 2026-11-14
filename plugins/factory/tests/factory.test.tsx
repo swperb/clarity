@@ -119,7 +119,7 @@ test('the tint is stable per project, paints, and leaves diff colors alone', asy
 
 type World = { files: Map<string, string>; notes: string[]; toasts: string[]; themes: string[]; store: Map<string, unknown> }
 
-function world(on: On, id = 'me', cwd = '/code/atlas'): World {
+function world(on: On, id = 'me', cwd = '/code/atlas', isCommandRefused = false): World {
   const w: World = { files: new Map(), notes: [], toasts: [], themes: [], store: new Map() }
   on('env.get', (_, e) => ({ value: e.name === 'HOME' ? '/home/me' : undefined }))
   on('session.id', () => ({ value: id }))
@@ -143,7 +143,7 @@ function world(on: On, id = 'me', cwd = '/code/atlas'): World {
   on('fs.write', (_, e) => (w.files.set(e.path, e.text), { value: undefined }))
   on('store.get', (_, e) => ({ value: w.store.get(e.key) }))
   on('store.set', (_, e) => (w.store.set(e.key, e.value), { value: undefined }))
-  on('command.register', () => ({ value: { command: 'factory' } }))
+  on('command.register', () => (isCommandRefused ? { deny: 'a command of that name exists' } : { value: { command: 'factory' } }))
   on('ui.notify', (_, e) => (w.notes.push(`${e.title ?? ''}|${e.text}`), { value: { isSent: true, channel: 'client' } }))
   on('ui.toast', (_, e) => (w.toasts.push(e.text), { value: undefined }))
   on('ui.open', () => ({ value: { isPlaced: true } }))
@@ -189,6 +189,13 @@ test('the ledger follows a session from start to end', async ($, on) => {
 
   await $.session.end({ reason: 'other', sessionId: 'me', resume: { id: 'me' } } as never)
   expect(mine(w)?.state).toBe('ended')
+})
+
+test('a refused /factory command does not stop the ledger', async ($, on) => {
+  const w = world(on, 'me', '/code/atlas', true)
+  await $.session.start(START)
+  expect(mine(w)?.state).toBe('idle')
+  expect(mine(w)?.project).toBe('atlas')
 })
 
 test('the pane puts sessions that need you on top, grouped by project', async ($, on) => {

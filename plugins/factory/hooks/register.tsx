@@ -277,10 +277,13 @@ async function openPane($: Engine): Promise<void> {
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     const enabled = await loadFeatures($)
-    await $.command.register({
-      name: 'factory',
-      description: 'Open the factory floor, or switch a feature: /factory [settings | ledger|notify|tint|radar on|off]',
-    })
+    // A refused name must not throw out of startup: the ledger and tint still run.
+    await $.command
+      .register({
+        name: 'factory',
+        description: 'Open the factory floor, or switch a feature: /factory [settings | ledger|notify|tint|radar on|off]',
+      })
+      .catch(() => $.ui.log('factory: the /factory command could not be registered'))
     const place = await findPlace($)
     if (enabled.tint) {
       await applyTint($, place.project).catch(() => undefined)
