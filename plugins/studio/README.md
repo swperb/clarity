@@ -12,7 +12,8 @@ itself, and it stays quiet: no toasts, no sounds, the app's own diff colors.
 ## What you get
 
 **Session header.** The folder name, its git branch, the model, and one live line:
-`● Claude is reading src/cart.js`, `● Claude is running npm test`, or `○ Idle`.
+`● Claude is reading src/cart.js` while a tool runs, `● Claude is working · last: Ran npm test ✓`
+between tool calls for the rest of the turn, and `○ Idle` once the turn ends.
 
 **File tree** of the session folder. Folders open on click and load as you open
 them; `.git`, `node_modules`, `dist`, `build`, `.next`, `target` and `__pycache__`

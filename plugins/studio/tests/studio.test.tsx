@@ -115,7 +115,7 @@ test('an Edit shows as a diff in the app diff colors, and the widget glances at 
 
   const widget = await $.ui.mount(pane(40, 'widget'))
   const line = await widget.find({ type: 'Text', text: /Edited src\/cart\.js/ })
-  expect(line?.text).toBe('Edited src/cart.js +2 −1')
+  expect(line?.text).toBe('Working · Edited src/cart.js +2 −1')
   await widget.unmount()
 })
 
@@ -297,7 +297,7 @@ test('an MCP edit shows as a diff rebuilt from its input, and the live line foll
   expect(code?.props.format).toBe('diff')
   expect(code?.props.source).toBe('@@ -1,1 +1,1 @@\n-items => 1\n+items => 0')
   expect((await ui.find({ type: 'Button', key: 'touch:m1' }))?.text).toContain('Edited src/cart.js +1 −1')
-  expect((await ui.find({ type: 'Text', text: /Idle/ })) !== undefined).toBe(true)
+  expect((await ui.find({ type: 'Text', text: /Claude is working · last: Edited src\/cart\.js/ })) !== undefined).toBe(true)
   await ui.unmount()
 })
 
@@ -349,4 +349,39 @@ test('helpers: MCP tools by input shape, and replacement diffs', async () => {
   expect(classifyMcpTool('mcp__ndstrl__search', { query: 'x' })).toBe(undefined)
   expect(classifyMcpTool('Read', { file_path: 'a' })).toBe(undefined)
   expect(replacementDiff('a\nb\n', 'c\n', 7)).toBe('@@ -7,2 +7,1 @@\n-a\n-b\n+c')
+})
+
+// ── Working and idle ────────────────────────────────────────────────────────
+
+test('the header says Claude is working for the whole turn, not only while a tool runs', async ($, on) => {
+  engine(on)
+  on('tool.call', () => READ_RESULT)
+  on('turn.start', (_, e) => ({ turnId: e.turnId }))
+  on('turn.complete', (_, e) => ({ text: e.answer }))
+
+  await $.session.start({ cwd: CWD, surface: 'desktop', isInteractive: true })
+
+  // A tool call alone (a reload mid-turn misses turn.start) flips it to working.
+  await $.tool.call({ tool: 'Read', file_path: `${CWD}/src/cart.js`, tool_use_id: 't1' })
+  const ui = await $.ui.mount(pane(120))
+  expect((await ui.find({ type: 'Text', text: /Claude is working/ }))?.text).toBe('● Claude is working · last: Read src/cart.js')
+  expect(await ui.find({ type: 'Text', text: /Idle/ })).toBe(undefined)
+  await ui.unmount()
+
+  const widget = await $.ui.mount(pane(40, 'widget'))
+  expect((await widget.find({ type: 'Text', text: /Working/ }))?.text).toBe('Working · Read src/cart.js')
+  await widget.unmount()
+
+  // The turn ends: idle. A new turn starts: working again, before any tool runs.
+  await $.turn.complete({ answer: 'done', durationMs: 10, isAborted: false, turnId: 'turn-1', reason: 'answer' })
+  const idle = await $.ui.mount(pane(120))
+  expect((await idle.find({ type: 'Text', text: /Idle/ })) !== undefined).toBe(true)
+
+  await $.turn.start({ text: 'fix the cart', turnId: 'turn-2' })
+  expect((await idle.find({ type: 'Text', text: /Claude is working/ })) !== undefined).toBe(true)
+
+  // A subagent's turn ending leaves the main turn working.
+  await $.turn.complete({ answer: 'sub', durationMs: 5, isAborted: false, turnId: 'turn-3', agentId: 'a1', reason: 'answer' })
+  expect((await idle.find({ type: 'Text', text: /Claude is working/ })) !== undefined).toBe(true)
+  await idle.unmount()
 })

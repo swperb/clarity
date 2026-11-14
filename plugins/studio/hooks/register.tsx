@@ -40,6 +40,7 @@ const listings = atom({ plugin: 'studio', key: 'listings' } as const, {}, { shap
 const expanded = atom({ plugin: 'studio', key: 'expanded' } as const, [], { shape: 'expanded-1' })
 const view = atom({ plugin: 'studio', key: 'view' } as const, null, { shape: 'view-1' })
 const isFollowing = atom({ plugin: 'studio', key: 'isFollowing' } as const, true)
+const isWorking = atom({ plugin: 'studio', key: 'isWorking' } as const, false)
 const tab = atom({ plugin: 'studio', key: 'tab' } as const, 'files' as Tab)
 const canDock = atom({ plugin: 'studio', key: 'canDock' } as const, false)
 const isOpened = atom({ plugin: 'studio', key: 'isOpened' } as const, false)
@@ -427,6 +428,7 @@ export const register: Register = on => {
     const cwd = await cwdOf($).catch(() => '')
     const id = e.tool_use_id ?? `${tool}:${await $.clock.now().catch(() => 0)}`
 
+    await update($, isWorking, () => true).catch(() => undefined)
     await update($, active, list => [...list, mcp === undefined ? activeOf(tool, input, cwd, id) : activeOfMcp(mcp, cwd, id)]).catch(() => undefined)
     let ran: Ran
     try {
@@ -455,7 +457,19 @@ export const register: Register = on => {
     return ran
   }).catch(($, e, next) => next(e)) // Studio only watches: if it fails, the call goes on as if it were not here.
 
+  // Working spans the whole turn, not just the moments a tool runs.
+  on('turn.start', async ($, e, next) => {
+    if (e.agentId === undefined) {
+      await update($, isWorking, () => true).catch(() => undefined)
+    }
+    return next(e)
+  })
+
   on('turn.complete', async ($, e, next) => {
+    if (e.agentId === undefined) {
+      await update($, isWorking, () => false).catch(() => undefined)
+      await update($, active, () => []).catch(() => undefined)
+    }
     await refreshInfo($).catch(() => undefined)
     if (await read($, isOpened).catch(() => false)) {
       await refreshListings($).catch(() => undefined)
@@ -467,7 +481,7 @@ export const register: Register = on => {
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const { Box, Button, Code, Text } = $.ui.resolve(e)
-    const [session, running, recent, marked, lists, open, shown, following, current] = await Promise.all([
+    const [session, running, recent, marked, lists, open, shown, following, current, working] = await Promise.all([
       read($, info),
       read($, active),
       read($, touches),
@@ -477,6 +491,7 @@ export const register: Register = on => {
       read($, view),
       read($, isFollowing),
       read($, tab),
+      read($, isWorking),
     ])
     const now = running[running.length - 1]
 
@@ -494,6 +509,17 @@ export const register: Register = on => {
         )
       }
       const last = recent[0]
+      if (working) {
+        return (
+          <Text wrap="truncate-end">
+            <Text color="suggestion">Working</Text>
+            {last === undefined ? '' : <Text dimColor> · {last.label}</Text>}
+            {last?.adds !== undefined ? (
+              <Text> <Text color="diffAdded">+{last.adds}</Text> <Text color="diffRemoved">−{last.dels ?? 0}</Text></Text>
+            ) : ''}
+          </Text>
+        )
+      }
       return (
         <Text wrap="truncate-end" dimColor={last === undefined}>
           {last === undefined ? `Studio · ${session?.folder ?? ''}` : last.label}
@@ -520,6 +546,11 @@ export const register: Register = on => {
           <Text wrap="truncate-end">
             <Text color="suggestion">● Claude is {now.verb.toLowerCase()}</Text> {now.label}
             {running.length > 1 ? <Text dimColor> +{running.length - 1} more</Text> : ''}
+          </Text>
+        ) : working ? (
+          <Text wrap="truncate-end">
+            <Text color="suggestion">● Claude is working</Text>
+            {recent[0] === undefined ? '' : <Text dimColor> · last: {recent[0].label}</Text>}
           </Text>
         ) : (
           <Text dimColor>○ Idle</Text>
