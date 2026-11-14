@@ -4,7 +4,8 @@
 // 1. Words first: primary text is 7:1+ on every surface, muted text 4.5:1+.
 // 2. Status you can't miss, even with color-vision deficiency: danger is a
 //    vermillion and success a blue-leaning green, so they differ in hue AND
-//    lightness (safe for deuteranopia/protanopia); diffs follow the same split.
+//    lightness (safe for deuteranopia/protanopia). Diff colors stay the app's
+//    standard green and red, which read instantly as file changes.
 // 3. Calm surfaces: slate-tinted grays a few percent apart, no pure black or
 //    white, so panels separate without shouting and dark mode doesn't halate.
 // 4. Keyboard-first: contrast 'more' gives stronger borders and focus rings.
@@ -33,15 +34,6 @@ export function clarity() {
           'text-muted': '#55606f',
         },
       },
-      git: {
-        added: '#12876f',
-        removed: '#b5361d',
-        modified: '#2563c9',
-        merged: '#7a4fc4',
-        closed: '#b5361d',
-        conflicting: '#94600f',
-        draft: '#55606f',
-      },
     },
     dark: {
       gray: {
@@ -54,15 +46,6 @@ export function clarity() {
           'text-secondary': '#c3cbd6',
           'text-muted': '#a3adbb',
         },
-      },
-      git: {
-        added: '#5fd6b6',
-        removed: '#ff8f78',
-        modified: '#8fb6ff',
-        merged: '#c0a6ff',
-        closed: '#ff8f78',
-        conflicting: '#f2bb63',
-        draft: '#b3bcc8',
       },
     },
   })

@@ -6,7 +6,7 @@ long session. Every theme here is a small Claude Code plugin, installable in one
 
 | Theme | What it's for |
 | --- | --- |
-| [**Clarity**](themes/clarity) | High legibility, colorblind-safe status and diffs, strong keyboard focus rings. Light and dark. |
+| [**Clarity**](themes/clarity) | High legibility, colorblind-safe status colors, standard diff colors, strong keyboard focus rings. Light and dark. |
 
 ## Install a theme
 
@@ -38,9 +38,11 @@ Looking good is the easy part. A theme in this repo also has to:
    muted text at 4.5:1 or better.
 2. **Keep meaning.** Danger reads as red, success as green, warning as amber, and they
    stay distinguishable for people with color-vision deficiency (differ in lightness,
-   not just hue). Diff additions and removals follow the same rule.
-3. **Work in both light and dark**, unless the idea only makes sense in one.
-4. **Not trip the app's own checks.** `makeColors` reports contrast problems; no line
+   not just hue).
+3. **Leave diffs alone.** Added/removed lines keep the app's standard green and red:
+   everyone reads them instantly, so a theme doesn't override `git` colors.
+4. **Work in both light and dark**, unless the idea only makes sense in one.
+5. **Not trip the app's own checks.** `makeColors` reports contrast problems; no line
    may start with `Desktop won't paint`, or the app ignores the theme.
 
 ## Add a theme

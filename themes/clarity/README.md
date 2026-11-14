@@ -14,9 +14,8 @@ A theme for Claude Code Desktop that's built to make long working sessions easie
 - **Status you can't misread.** Danger is a vermillion and success a blue-leaning green.
   They differ in lightness as well as hue, so errors, destructive actions and passing
   checks stay distinct with red-green color blindness.
-- **Diffs that scan fast.** Added, removed, modified, merged and conflicting each get
-  their own hue and clear the app's text-contrast bar in dark mode, so you can review a
-  change without squinting.
+- **Diffs stay vanilla.** File changes keep the app's standard green and red, which
+  everyone already reads at a glance and which pop against Clarity's calm surfaces.
 - **Keyboard-friendly.** Turns on the app's high-contrast mode for stronger borders and
   focus rings, so you always know where focus is.
 - **Calm structure.** Surfaces are slate-tinted grays a few percent apart: panels, cards
@@ -24,17 +23,17 @@ A theme for Claude Code Desktop that's built to make long working sessions easie
 
 ## Palette
 
-| Role | Light | Dark (diffs) |
-| --- | --- | --- |
-| Accent | `#2563c9` | `#8fb6ff` |
-| Danger | `#d2462b` | `#ff8f78` |
-| Success | `#12876f` | `#5fd6b6` |
-| Warning | `#b7791f` | `#f2bb63` |
-| Pro | `#7a4fc4` | `#c0a6ff` |
-| Page | `#f0f3f7` | `#12161b` |
-| Text | `#141a23` | `#eef2f7` |
+| Role | Seed | Light page / text | Dark page / text |
+| --- | --- | --- | --- |
+| Accent | `#2563c9` | | |
+| Danger | `#d2462b` | | |
+| Success | `#12876f` | | |
+| Warning | `#b7791f` | | |
+| Pro | `#7a4fc4` | | |
+| Surfaces | | `#f0f3f7` / `#141a23` | `#12161b` / `#eef2f7` |
 
 The app derives each role's full scale from these seeds, tuning lightness per mode.
+Diff and git colors are left as the app's own.
 
 Applies to the desktop and mobile apps; terminals and editors keep their own colors.
 
