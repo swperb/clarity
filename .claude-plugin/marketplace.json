@@ -11,6 +11,11 @@
       "name": "workbench",
       "source": "./plugins/workbench",
       "description": "Quiet productivity: an attention band for failing tests, uncommitted work and context fill; a risky-command guard; a changed-files pane; a usage chip that explains time, cost and context when clicked."
+    },
+    {
+      "name": "factory",
+      "source": "./plugins/factory",
+      "description": "A control room for many concurrent sessions: a factory-floor pane grouped by project, a needs-you queue with one batched notification, a per-project color tint and a collision radar."
     }
   ]
 }

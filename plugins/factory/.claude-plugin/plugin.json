@@ -1,0 +1,9 @@
+{
+  "name": "factory",
+  "version": "0.1.0",
+  "description": "A control room for many Claude Code sessions across many projects: a shared heartbeat, a factory-floor pane, a needs-you queue with one batched notification, a per-project color tint and a collision radar.",
+  "author": { "name": "swperb", "url": "https://github.com/swperb" },
+  "license": "MIT",
+  "repository": "https://github.com/swperb/claude-code-themes",
+  "types": "./types/index.d.ts"
+}

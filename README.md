@@ -42,6 +42,7 @@ only runs `claude plugin …` commands you could run yourself.
 | --- | --- |
 | [**Clarity**](themes/clarity) · theme | High legibility, colorblind-safe status colors, standard diff colors, strong keyboard focus rings. Light and dark. |
 | [**Workbench**](plugins/workbench) · plugin | An attention band for failing tests, uncommitted work and a filling context window; a guard that asks before hard-to-undo commands; a changed-files pane; a usage chip that explains time, cost and context when clicked. |
+| [**Factory**](plugins/factory) · plugin | One control room for many sessions across many projects: a factory-floor pane, a needs-you queue with one batched notification, a per-project color tint, and a radar for two sessions editing the same file. |
 
 Each plugin also has its own in-session settings, for example `/workbench guard off`.
 
