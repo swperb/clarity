@@ -1,6 +1,8 @@
 {
   "name": "claude-code-themes",
-  "owner": { "name": "swperb" },
+  "owner": {
+    "name": "swperb"
+  },
   "plugins": [
     {
       "name": "clarity",
@@ -16,6 +18,11 @@
       "name": "factory",
       "source": "./plugins/factory",
       "description": "A control room for many concurrent sessions: a factory-floor pane grouped by project, a needs-you queue with one batched notification, a per-project color tint and a collision radar."
+    },
+    {
+      "name": "studio",
+      "source": "./plugins/studio",
+      "description": "A soft IDE beside the chat: the session folder's file tree, a live viewer that follows what Claude reads, edits, searches and runs, and an activity strip."
     }
   ]
 }
