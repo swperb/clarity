@@ -1,6 +1,8 @@
 {
   "name": "claude-code-themes",
-  "owner": { "name": "swperb" },
+  "owner": {
+    "name": "swperb"
+  },
   "plugins": [
     {
       "name": "clarity",
@@ -11,6 +13,11 @@
       "name": "workbench",
       "source": "./plugins/workbench",
       "description": "Quiet productivity: an attention band for failing tests, uncommitted work and context fill; a risky-command guard; a changed-files pane; a cost/time status line."
+    },
+    {
+      "name": "factory",
+      "source": "./plugins/factory",
+      "description": "A control room for many concurrent sessions: a factory-floor pane grouped by project, a needs-you queue with one batched notification, a per-project color tint and a collision radar."
     }
   ]
 }
