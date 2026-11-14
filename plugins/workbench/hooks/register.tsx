@@ -546,11 +546,18 @@ export const register: Register = on => {
         </Box>
         <Box flexDirection="column">
           {list.slice(0, room).map(f => (
-            <Button key={`file:${f.path}`} plain onPress={() => $.prompt.fill({ text: `@${f.path} `, mode: 'insert' })}>
-              <Text color="diffAdded" tabular>+{f.adds}</Text> <Text color="diffRemoved" tabular>−{f.dels}</Text> {f.path}
-              {f.isNew ? <Text color="suggestion"> new</Text> : ''}
-              <Text dimColor> ×{f.edits}</Text>
-            </Button>
+            // Counts sit outside the Button: a surface draws a Button's text in
+            // its own color, which would hide the diff green and red.
+            <Box key={`row:${f.path}`} flexDirection="row" columnGap={1}>
+              <Text tabular>
+                <Text color="diffAdded">+{f.adds}</Text> <Text color="diffRemoved">−{f.dels}</Text>
+              </Text>
+              <Button key={`file:${f.path}`} plain onPress={() => $.prompt.fill({ text: `@${f.path} `, mode: 'insert' })}>
+                {f.path}
+                {f.isNew ? <Text color="suggestion"> new</Text> : ''}
+                <Text dimColor> ×{f.edits}</Text>
+              </Button>
+            </Box>
           ))}
           {list.length > room && <Text dimColor>…and {list.length - room} more</Text>}
         </Box>

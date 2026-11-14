@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.1 (2026-11-14)
+
+- **Installer works on Windows.** `claude` is a `.cmd` shim there, which Node only starts
+  through the shell, so 1.0.0 failed on its first command. CI now runs on Linux, macOS
+  and Windows (Node 18, 20, 22), starting a real `claude.cmd` from a path with a space.
+- **Workbench:** the per-file `+added −removed` counts in the Changed files pane show in
+  the standard diff green and red (they were drawn in the row's button color).
+- **Launch video** has an original score.
+
 ## 1.0.0 (2026-11-14)
 
 First public release of Clarity for Claude Code.

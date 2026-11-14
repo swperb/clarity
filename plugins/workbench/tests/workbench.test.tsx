@@ -72,6 +72,10 @@ test('the pane lists an edited file with its line counts', async ($, on) => {
   const ui = await $.ui.mount(PANE)
   expect((await ui.find({ type: 'Text', text: /1 file/ })) !== undefined).toBe(true)
   expect((await ui.find({ type: 'Button', key: 'file:src/main.ts' })) !== undefined).toBe(true)
+  // The counts stay outside the Button so the surface keeps their diff colors.
+  expect((await ui.find({ type: 'Button', key: 'file:src/main.ts' }))?.text.startsWith('src/main.ts')).toBe(true)
+  expect((await ui.find({ type: 'Text', text: /^\+2$/ }))?.props.color).toBe('diffAdded')
+  expect((await ui.find({ type: 'Text', text: /^−1$/ }))?.props.color).toBe('diffRemoved')
   await ui.unmount()
 })
 
