@@ -47,7 +47,7 @@ test('session start paints Neon Noir, colors and scene in one set, with nothing 
   expect(w.toasts).toEqual([])
 })
 
-test('the palette paints in both modes, keeps the words readable and leaves git colors alone', async () => {
+test('the palette is dark only, keeps the words readable and leaves git colors alone', async () => {
   const { theme, problems } = neonNoir()
   expect(problems.filter(line => line.startsWith("Desktop won't paint"))).toEqual([])
   expect(checkColors(theme).filter(line => line.startsWith("Desktop won't paint"))).toEqual([])
@@ -59,13 +59,12 @@ test('the palette paints in both modes, keeps the words readable and leaves git 
     light: { gray: { anchors: { 'surface-0': '#f0f0f0', 'text-primary': '#111111' } } },
     dark: { gray: { anchors: { 'surface-0': '#101418', 'text-primary': '#eeeeee' } } },
   }).theme
-  for (const mode of ['light', 'dark'] as const) {
-    const ours = theme.inputs[mode] ?? {}
-    const app = plain.inputs[mode] ?? {}
-    expect(Object.keys(ours).length > 50).toBe(true)
-    for (const key of Object.keys(ours).filter(k => k.includes('git'))) {
-      expect([key, ours[key]]).toEqual([key, app[key]])
-    }
+  expect(theme.inputs.light).toBe(undefined)
+  const ours = theme.inputs.dark ?? {}
+  const app = plain.inputs.dark ?? {}
+  expect(Object.keys(ours).length > 50).toBe(true)
+  for (const key of Object.keys(ours).filter(k => k.includes('git'))) {
+    expect([key, ours[key]]).toEqual([key, app[key]])
   }
 })
 
@@ -92,10 +91,9 @@ test("another theme's scene is left to its own plugin", async ($, on) => {
   await ui.unmount()
 })
 
-test('the scene fits the limit, stays calm and runs no script', async () => {
+test('the scene fits the limit, holds still for reduced motion and runs no script', async () => {
   expect(SCENE.length < 131072).toBe(true)
-  expect(SCENE.includes('preserveAspectRatio="xMidYMin slice"')).toBe(true)
+  expect(SCENE.includes('preserveAspectRatio="xMidYMid slice"')).toBe(true)
   expect(SCENE.includes('prefers-reduced-motion')).toBe(true)
-  expect(SCENE.includes('prefers-color-scheme:light')).toBe(true)
   expect(/<script|on[a-z]+=|href="http/i.test(SCENE)).toBe(false)
 })

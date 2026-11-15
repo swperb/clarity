@@ -4,7 +4,7 @@
   "engines": {
     "claude-code": ">=2.1.321"
   },
-  "description": "A neon-noir theme for Claude Desktop: blue-black night surfaces, electric cyan and hot magenta accents, and a quiet skyline in the rain behind the chat. Light and dark.",
+  "description": "A neon-noir theme for Claude Desktop: hazard yellow, electric cyan and neon red on blue-steel black, with a quiet megacity behind the chat: angular holo billboards, falling data streams, slow traffic and a red grid floor. Dark only.",
   "author": {
     "name": "swperb",
     "url": "https://github.com/swperb"
