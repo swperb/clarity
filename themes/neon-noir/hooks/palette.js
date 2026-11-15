@@ -1,15 +1,13 @@
-// Neon Noir: a rain-slick city at night, lit by signs.
+// Neon Noir: a megacity after midnight, all neon and chrome.
 //
 // Design rules, in priority order:
 // 1. Words first: primary text is 7:1+ on every surface, muted text 4.5:1+.
-//    The neon lives in the accents; the page itself stays a quiet blue-black.
-// 2. Neon on accent and pro: electric cyan for focus, links and keywords, hot
-//    magenta for pro and code literals. Status keeps its meaning: danger is a
-//    neon red, success a neon green, warning a signal amber.
-// 3. Night surfaces: blue-black tinted toward violet, a few percent apart, so
-//    panels read as wet asphalt under different signs, never pure black.
-// 4. Day mode is the same street in morning haze: pale violet-gray paper with
-//    the same signs, switched off a little.
+//    The noise lives in the backdrop; the panels the words sit on stay dark.
+// 2. Hazard-yellow lead: focus, links and keywords in a sharp yellow; electric
+//    cyan for pro and code literals. Status keeps its meaning: danger a neon
+//    red, success an acid green, warning a burnt orange (apart from the yellow).
+// 3. Blue-steel night surfaces a few percent apart, never pure black.
+// 4. Dark only: this city has no daytime.
 // Diff and git colors stay the app's own standard green and red.
 import { makeColors } from './make-colors.js'
 
@@ -17,35 +15,24 @@ export function neonNoir() {
   return makeColors({
     label: 'Neon Noir',
     id: 'neon-noir',
+    only: 'dark',
     roles: {
-      accent: '#14d4f4', // electric cyan
-      danger: '#ff3355', // neon red
-      success: '#2ee88f', // neon green
-      warning: '#ffb81c', // signal amber
-      pro: '#ff2bb4', // hot magenta
-    },
-    light: {
-      gray: {
-        anchors: {
-          'surface-0': '#eeecf5',
-          'surface-1': '#f4f3f9',
-          'surface-2': '#fafafd',
-          'text-primary': '#130f26',
-          'text-secondary': '#36304f',
-          'text-muted': '#544d6e',
-        },
-      },
+      accent: '#f7e017', // hazard yellow
+      danger: '#ff3b4a', // neon red
+      success: '#2dff9a', // acid green
+      warning: '#ff8a1f', // burnt orange
+      pro: '#00f0ff', // electric cyan
     },
     dark: {
       gray: {
         anchors: {
-          'surface-0': '#0a0913',
-          'surface-1': '#0f0d1b',
-          'surface-2': '#131123',
-          'surface-3': '#17152a',
-          'text-primary': '#eceeff',
-          'text-secondary': '#c4c5e4',
-          'text-muted': '#a09fc6',
+          'surface-0': '#08090e',
+          'surface-1': '#0d0f16',
+          'surface-2': '#11141d',
+          'surface-3': '#151925',
+          'text-primary': '#eef3f6',
+          'text-secondary': '#c2cad6',
+          'text-muted': '#9ca7b6',
         },
       },
     },

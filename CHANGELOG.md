@@ -27,9 +27,10 @@
   - The Clarity theme steps aside when another theme plugin sets a look.
   - Workbench and Studio already draw with the app's meaning-based colors, so they
     follow any theme unchanged.
-- **New theme: Neon Noir.** A night city in the rain: blue-black surfaces, electric cyan
-  and hot magenta accents, neon status colors, and a quiet animated skyline along the
-  top of the window. Dark and light, 7:1 primary text, standard diff colors. It counts as
+- **New theme: Neon Noir.** Hazard yellow, electric cyan and neon red on blue-steel
+  black, with a quiet megacity behind the chat: angular holographic billboards, falling
+  data streams, slow traffic, searchlights and a red grid floor, under faint scanlines.
+  No text in the scene. Dark only, 7:1 primary text, standard diff colors. It counts as
   "another theme" to the rest of Clarity, so it doubles as the live check of the above.
 - **Installer:** a first run and `--all` check every plugin and the Clarity theme, not
   every theme; pick Neon Noir in the picker or with `--only`.
