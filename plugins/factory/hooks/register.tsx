@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface as Engine, Register, Timer } from 'claude-code'
+import type { EngineInterface as Engine, Register, ThemeSetArgs, Timer } from 'claude-code'
 
-import type { Collision, Entry, Feature, Features, Place, SessionState } from '../types'
+import type { BaseTheme, Collision, Entry, Feature, Features, Place, SessionState } from '../types'
 import {
   byProject,
   collisionKey,
@@ -11,6 +11,8 @@ import {
   glance,
   hsl,
   hueOf,
+  isUnpaintable,
+  layerTint,
   liveEntries,
   needsYou,
   parseEntry,
@@ -40,6 +42,8 @@ const collisions = atom({ plugin: 'factory', key: 'collisions' } as const, [], {
 const dismissed = atom({ plugin: 'factory', key: 'dismissed' } as const, [])
 const isPaneOpen = atom({ plugin: 'factory', key: 'isPaneOpen' } as const, false)
 const notifiedCount = atom({ plugin: 'factory', key: 'notifiedCount' } as const, null)
+/** The theme another plugin set (the person's chosen look), which the tint lays over. */
+const baseTheme = atom({ plugin: 'factory', key: 'baseTheme' } as const, null, { shape: 'theme-1' })
 
 const PANE = 'factory-floor'
 const STORE_KEY = 'features'
@@ -254,15 +258,32 @@ async function loadFeatures($: Engine): Promise<Features> {
 }
 
 async function applyTint($: Engine, project: string): Promise<void> {
+  const base = (await read($, baseTheme)) as ThemeSetArgs | null
+  if (base !== null) {
+    // Another plugin's theme stands: tint its accent, keep everything else.
+    await $.theme.set(layerTint(base, project))
+    return
+  }
   const { look, problems } = tintFor(project)
-  if (problems.some(line => line.startsWith("Desktop won't paint"))) {
+  if (isUnpaintable(problems)) {
     return // Never send a look Desktop would throw away whole.
   }
   await $.theme.set(look)
 }
 
+/** Tint off: hand back the theme the person chose, or the app's own look when there was none. */
 async function clearTint($: Engine): Promise<void> {
+  const base = (await read($, baseTheme)) as ThemeSetArgs | null
+  if (base !== null) {
+    await $.theme.set(base)
+    return
+  }
   await $.theme.clear()
+}
+
+/** A call this plugin made itself (its tint), as opposed to another theme plugin's. */
+function isOwnCall(plugin: string): boolean {
+  return plugin === 'factory'
 }
 
 async function openPane($: Engine): Promise<void> {
@@ -303,6 +324,29 @@ export const register: Register = on => {
       }
       await refresh($)
     })().catch(() => undefined)
+    return next(e)
+  })
+
+  // ── Other themes ──────────────────────────────────────────────────────────
+  // Any theme plugin works with Factory: its look is remembered as the base and
+  // the tint is laid over it (accent only), instead of the two replacing each
+  // other in whatever order the plugins happen to load.
+
+  on('theme.set', async ($, e, next) => {
+    if (isOwnCall(next.origin.plugin)) {
+      return next(e)
+    }
+    const base: ThemeSetArgs = e
+    await update($, baseTheme, () => base as BaseTheme)
+    const me = await read($, self)
+    const { tint } = await read($, features)
+    return next(tint && me !== null ? layerTint(base, me.project) : e)
+  })
+
+  on('theme.clear', async ($, e, next) => {
+    if (!isOwnCall(next.origin.plugin)) {
+      await update($, baseTheme, () => null)
+    }
     return next(e)
   })
 
