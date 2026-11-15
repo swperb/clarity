@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **Factory: a dashboard.** `/overview` opens one pane over every project and session:
+  tiles for live sessions, what needs you, what's working, tasks, spend, commits and
+  your fullest usage window; a triage queue; spend and tasks charted by the hour (or by
+  the day for the last seven), stacked by project, with tooltips; spend by project; a
+  projects table; every live session with its cost and context; and usage. Minimized, it
+  is one line. `/factory dashboard` opens it too.
+- **Factory: Home no longer counts a permission settled at once as a hold-up.** "What
+  held it up" listed prompts an automatic allow or deny settled in milliseconds; it now
+  lists only those that waited at least a second.
 - **Factory: updates reach open sessions without quitting Claude Desktop.** After
   `npx github:swperb/clarity update`, every open session notices the new version within
   a minute and shows a quiet row above the prompt, `↻ Clarity X is installed`. Press

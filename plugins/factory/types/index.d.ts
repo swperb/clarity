@@ -137,6 +137,8 @@ declare module 'claude-code' {
       isHomeOpen: boolean
       homeOpenedFor: number | null
       homeView: 'away' | 'today'
+      isDashboardOpen: boolean
+      dashboardRange: 'today' | 'week'
       baseTheme: Shaped<BaseTheme | null>
       pendingUpdate: Shaped<PendingUpdate | null>
       updateDismissed: string | null
