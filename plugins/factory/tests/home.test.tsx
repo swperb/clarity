@@ -134,6 +134,8 @@ test('the briefing gathers work, open questions, holdups and usage across projec
         { at: from + 5 * MIN, kind: 'done', text: 'Added discount codes.', files: ['src/cart.ts', 'src/code.ts'], cost: 1.5, durationMs: 4 * MIN },
         { at: from + 6 * MIN, kind: 'commit', text: 'Add discount codes' },
         { at: from + 7 * MIN, kind: 'blocked', text: 'Needs permission: Bash: git push', resolvedAt: from + 30 * MIN },
+        // Settled at once (an automatic decision): nobody waited, so it held nothing up.
+        { at: from + 8 * MIN, kind: 'blocked', text: 'Needs permission: Bash: ls', resolvedAt: from + 8 * MIN + 3 },
         { at: from + 40 * MIN, kind: 'question', text: 'Should I also migrate the old tokens?' },
       ],
     },
