@@ -89,7 +89,7 @@ async function writePresence($: Engine, p: Presence): Promise<void> {
   await $.fs.write(await presencePath($), JSON.stringify(p))
 }
 
-async function readJournals($: Engine): Promise<Journal[]> {
+export async function readJournals($: Engine): Promise<Journal[]> {
   const dir = await journalDir($)
   if (!(await $.fs.exists(dir))) {
     return []

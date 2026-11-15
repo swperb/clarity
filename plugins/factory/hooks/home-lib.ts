@@ -11,6 +11,8 @@ export const JOURNAL_MAX = 300
 export const JOURNAL_DAYS = 7
 
 export const DEFAULT_HIBERNATE_MINUTES = 20
+/** A permission prompt counts as holding a session up only if it waited at least this long. */
+export const HELD_MIN_MS = 1000
 /** The Hibernation setting's choices, as the manifest's `userConfig.hibernate.options` lists them. */
 export const HIBERNATE_CHOICES = ['off', '10', '15', '20', '30', '45', '60', '90', '120'] as const
 
@@ -324,7 +326,10 @@ export function brief(journals: readonly Journal[], entries: readonly Entry[], f
   }
   const projects = [...byProject.values()].sort((a, b) => b.done.length + b.git.length - (a.done.length + a.git.length) || a.project.localeCompare(b.project))
 
-  const heldUp = inWindow.filter(i => (i.event.kind === 'blocked' && i.event.resolvedAt !== undefined) || i.event.kind === 'failed')
+  // A prompt settled within a second (an automatic allow or deny, as in a headless run) held nothing up.
+  const heldUp = inWindow.filter(
+    i => (i.event.kind === 'blocked' && i.event.resolvedAt !== undefined && i.event.resolvedAt - i.event.at >= HELD_MIN_MS) || i.event.kind === 'failed',
+  )
 
   const freshest = [...entries].filter(e => e.limits.length > 0).sort((a, b) => b.heartbeatAt - a.heartbeatAt)[0]
 

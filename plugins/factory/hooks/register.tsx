@@ -34,6 +34,7 @@ import {
   openHome,
   registerHome,
 } from './home'
+import { dashboardClosed, dashboardEnded, dashboardStart, openDashboard, registerDashboard } from './dashboard'
 
 // ── State ───────────────────────────────────────────────────────────────────
 // Held by the host for the session, so a hot reload keeps it. Bump a `shape`
@@ -338,6 +339,7 @@ async function openPane($: Engine): Promise<void> {
 
 export const register: Register = (on, options) => {
   registerHome(on, options)
+  registerDashboard(on)
 
   on('session.start', async ($, e, next) => {
     const enabled = await loadFeatures($)
@@ -345,7 +347,7 @@ export const register: Register = (on, options) => {
     await $.command
       .register({
         name: 'factory',
-        description: 'Open the factory floor, or switch a feature: /factory [home | settings | ledger|notify|tint|radar|home|updates on|off]',
+        description: 'Open the factory floor, or switch a feature: /factory [dashboard | home | settings | ledger|notify|tint|radar|home|updates on|off]',
       })
       .catch(() => $.ui.log('factory: the /factory command could not be registered'))
     const place = await findPlace($)
@@ -359,6 +361,7 @@ export const register: Register = (on, options) => {
       startPaneTick($)
     }
     await homeStart($, e.isInteractive).catch(() => undefined)
+    await dashboardStart($).catch(() => undefined)
     // Tidy the ledger: ended a day ago or silent for a week.
     void (async () => {
       const entries = await readLedger($)
@@ -407,6 +410,11 @@ export const register: Register = (on, options) => {
       return { text: 'Opened the factory floor.' }
     }
 
+    if (name === 'dashboard' && state === '') {
+      await openDashboard($)
+      return { text: 'Opened the dashboard.' }
+    }
+
     if (name === 'home' && state === '') {
       if (!current.home) {
         return { text: 'Home is off. Turn it on with /factory home on.' }
@@ -451,7 +459,7 @@ export const register: Register = (on, options) => {
     const lines = (Object.keys(FEATURE_INFO) as Feature[]).map(
       f => `${current[f] ? '●' : '○'} ${f.padEnd(7)} ${FEATURE_INFO[f]}`,
     )
-    return { text: [...lines, '', 'Open the floor with /factory, Home with /home. Switch one with /factory <feature> on|off'].join('\n') }
+    return { text: [...lines, '', 'Open the floor with /factory, the dashboard with /overview, Home with /home. Switch one with /factory <feature> on|off'].join('\n') }
   })
 
   on('ui.close', async ($, e, next) => {
@@ -461,6 +469,7 @@ export const register: Register = (on, options) => {
       await update($, isPaneOpen, () => false)
     }
     await homeClosed($, e.id)
+    await dashboardClosed($, e.id)
     return next(e)
   })
 
@@ -515,6 +524,7 @@ export const register: Register = (on, options) => {
       paneTick?.cancel()
     }
     homeEnded(e.reason === 'clear')
+    dashboardEnded(e.reason === 'clear')
     const me = await read($, self)
     if (me !== null && me.id === e.sessionId && (await isOn($, 'ledger'))) {
       await writeEntry($, { ...me, state: 'ended', heartbeatAt: await $.clock.now() }).catch(() => undefined)

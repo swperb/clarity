@@ -68,6 +68,27 @@ The wait is a setting: **Open Home after you've been away**, in Factory's plugin
 in Claude Desktop. Pick 10, 15, 20 (the default), 30, 45, 60, 90 or 120 minutes, or
 **off** so Home only opens when you ask for it. Every session follows the same setting.
 
+**The dashboard** (`/overview`). One pane over every project and session, for running
+several at once:
+
+- **Tiles:** live sessions, how many need you, how many are working, tasks finished,
+  spend, commits, and your fullest usage window.
+- **Triage:** everything waiting on you, questions first, with how long each has waited.
+- **Spend and tasks over time:** bars of spend per finished task, stacked by project,
+  with the task count as a dashed line; hover a bar for its numbers. By the hour for
+  today, by the day for the last seven (**Today** / **7 days**).
+- **Spend by project**, then a **projects table**: live sessions, need you, tasks, files,
+  commits, spend and when each last saw activity.
+- **Sessions:** every live session with its state, branch, task, time in that state,
+  cost and context.
+- **Usage:** the plan's windows and when they reset, and sessions whose context is
+  nearly full.
+
+Spend counts each session's whole cost, the same way Home's "today" does. Charts can
+only place a task's cost in time once its session keeps a journal, so the dashboard says
+how much spend it can't chart. **Briefing** opens Home. Minimized, the dashboard is one
+line: `5 live · 1 needs you · 16 done · $127.34 today`.
+
 **Updates.** After you update Clarity (`npx github:swperb/clarity update`), every open
 session notices within a minute and shows a quiet row above the prompt:
 `↻ Clarity 1.1.0 is installed`, with **Reload** and **later**. **Reload** puts
@@ -79,6 +100,8 @@ runs `/reload-plugins` when you send it, so Factory can't reload a session by it
 
 ```
 /factory                   # open the factory floor
+/overview                  # open the dashboard (also /factory dashboard)
+/overview week             # the dashboard, for the last seven days
 /home                      # open Home: since you left (or since your last briefing)
 /home today                # Home, for all of today
 /home hibernate            # show the hibernation setting
