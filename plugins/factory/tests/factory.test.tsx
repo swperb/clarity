@@ -404,10 +404,10 @@ test('the task never shows the app\'s injected blocks or their ids', async () =>
 })
 
 test('a session that finished long ago settles into idle instead of needing you', async () => {
-  const base = { project: 'p', branch: 'main', task: 't', cwd: '/p', startedAt: 0, heartbeatAt: NOW, cost: 0, context: 0 }
-  const fresh = { ...base, id: 'fresh', state: 'waiting', since: NOW - 5 * 60_000 } as Entry
-  const old = { ...base, id: 'old', state: 'waiting', since: NOW - 23 * 3_600_000 } as Entry
-  const failed = { ...base, id: 'failed', state: 'failed', since: NOW - 23 * 3_600_000 } as Entry
+  const base = { project: 'p', branch: 'main', task: 't', startedAt: 0, heartbeatAt: NOW, cost: 0, context: 0 }
+  const fresh = entry({ ...base, id: 'fresh', state: 'waiting', since: NOW - 5 * 60_000 })
+  const old = entry({ ...base, id: 'old', state: 'waiting', since: NOW - 23 * 3_600_000 })
+  const failed = entry({ ...base, id: 'failed', state: 'failed', since: NOW - 23 * 3_600_000 })
   const live = liveEntries([fresh, old, failed], NOW)
   expect(needsYou(live).map(e => e.id)).toEqual(['failed', 'fresh'])
   expect(live.find(e => e.id === 'old')?.state).toBe('idle')
