@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface as Engine, Register, ThemeSetArgs, Timer } from 'claude-code'
 
-import type { BaseTheme, Collision, Entry, Feature, Features, Place, SessionState } from '../types'
+import type { BaseTheme, Collision, Entry, Feature, Features, LoadedFrom, PendingUpdate, Place, SessionState } from '../types'
 import {
   byProject,
   collisionKey,
@@ -17,11 +17,12 @@ import {
   needsYou,
   placeOf,
   prunable,
+  readClarityInstall,
   relativeTo,
   taskLine,
   tintFor,
 } from './lib'
-import { factoryDir, ledgerDir, readLedger } from './shared'
+import { factoryDir, installedPluginsFile, ledgerDir, readLedger } from './shared'
 import {
   homeClosed,
   homeEnded,
@@ -38,13 +39,14 @@ import {
 // Held by the host for the session, so a hot reload keeps it. Bump a `shape`
 // tag when its type changes: values stored under an old tag read as initial.
 
-const ALL_ON: Features = { ledger: true, notify: true, tint: true, radar: true, home: true }
+const ALL_ON: Features = { ledger: true, notify: true, tint: true, radar: true, home: true, updates: true }
 const FEATURE_INFO: Record<Feature, string> = {
   ledger: 'Heartbeat: this session shows on the factory floor of every other session',
   notify: 'One native notification when more sessions start waiting on you',
   tint: "Project tint: each project's windows wear their own accent color (desktop and mobile)",
   radar: 'Collision radar: warns when another session in the same repo edits a file this one edited',
   home: 'Home: a briefing of what every session did while you were away; opens itself after you have been idle a while',
+  updates: 'Updates: when a newer Clarity is installed, a row above the prompt offers to reload it into this session',
 }
 
 const features = atom({ plugin: 'factory', key: 'features' } as const, ALL_ON)
@@ -56,6 +58,12 @@ const isPaneOpen = atom({ plugin: 'factory', key: 'isPaneOpen' } as const, false
 const notifiedCount = atom({ plugin: 'factory', key: 'notifiedCount' } as const, null)
 /** The theme another plugin set (the person's chosen look), which the tint lays over. */
 const baseTheme = atom({ plugin: 'factory', key: 'baseTheme' } as const, null, { shape: 'theme-1' })
+/** A Clarity install on disk that this session has not loaded yet. */
+const pendingUpdate = atom({ plugin: 'factory', key: 'pendingUpdate' } as const, null, { shape: 'update-1' })
+/** The signature of an update the person put off with "later". */
+const updateDismissed = atom({ plugin: 'factory', key: 'updateDismissed' } as const, null)
+/** The Clarity install this session's code was loaded from, by the module that loaded it. */
+const loadedFrom = atom({ plugin: 'factory', key: 'loadedFrom' } as const, null, { shape: 'loaded-1' })
 
 const PANE = 'factory-floor'
 const STORE_KEY = 'features'
@@ -65,6 +73,11 @@ const PANE_REFRESH_MS = 5_000
 // Timers die with the module on a reload; `session.start` runs again and restarts them.
 let heartbeat: Timer | undefined
 let paneTick: Timer | undefined
+/**
+ * Names this load of the module. `/reload-plugins` loads the new code, and a
+ * new module means a new token: the install it finds then is its own.
+ */
+const MODULE_TOKEN = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
 
 // ── The ledger on disk ──────────────────────────────────────────────────────
 
@@ -224,6 +237,40 @@ async function recordEdit($: Engine, path: string): Promise<void> {
   await refresh($)
 }
 
+// ── Clarity updates ─────────────────────────────────────────────────────────
+// An update writes new code to disk, but a running session keeps the code it
+// loaded until `/reload-plugins`. Claude Desktop runs that command only when the
+// person sends it (a plugin's `$.command.run` is answered "isn't available over a
+// remote connection"), so Factory offers it in a row above the prompt instead.
+
+async function checkForUpdate($: Engine): Promise<void> {
+  if (!(await isOn($, 'updates'))) {
+    await update($, pendingUpdate, () => null)
+    return
+  }
+  const text = await $.fs.read(await installedPluginsFile($)).catch(() => undefined)
+  const install = typeof text === 'string' ? readClarityInstall(text) : undefined
+  if (install === undefined) {
+    return
+  }
+  const loaded = (await read($, loadedFrom)) as LoadedFrom | null
+  if (loaded === null || loaded.token !== MODULE_TOKEN) {
+    await update($, loadedFrom, () => ({ token: MODULE_TOKEN, signature: install.signature }))
+    // The row this session showed before a reload: say the reload took.
+    const before = (await read($, pendingUpdate)) as PendingUpdate | null
+    if (before !== null && before.signature === install.signature) {
+      $.ui.toast(`Clarity updated${before.version !== null ? ` to ${before.version}` : ''}`, { timeoutMs: 6000 })
+    }
+    await update($, pendingUpdate, () => null)
+    return
+  }
+  const next: PendingUpdate | null = install.signature === loaded.signature ? null : { version: install.version, signature: install.signature }
+  const current = (await read($, pendingUpdate)) as PendingUpdate | null
+  if (current?.signature !== next?.signature) {
+    await update($, pendingUpdate, () => next)
+  }
+}
+
 // ── Timers ──────────────────────────────────────────────────────────────────
 
 function startHeartbeat($: Engine): void {
@@ -232,6 +279,7 @@ function startHeartbeat($: Engine): void {
     void (async () => {
       // Another session may have switched a feature: the store is shared.
       await loadFeatures($)
+      await checkForUpdate($).catch(() => undefined)
       await touch($)
       await refresh($)
     })().catch(() => undefined)
@@ -297,7 +345,7 @@ export const register: Register = (on, options) => {
     await $.command
       .register({
         name: 'factory',
-        description: 'Open the factory floor, or switch a feature: /factory [home | settings | ledger|notify|tint|radar|home on|off]',
+        description: 'Open the factory floor, or switch a feature: /factory [home | settings | ledger|notify|tint|radar|home|updates on|off]',
       })
       .catch(() => $.ui.log('factory: the /factory command could not be registered'))
     const place = await findPlace($)
@@ -305,6 +353,7 @@ export const register: Register = (on, options) => {
       await applyTint($, place.project).catch(() => undefined)
     }
     await touch($, {}, place)
+    await checkForUpdate($).catch(() => undefined)
     startHeartbeat($)
     if (await read($, isPaneOpen)) {
       startPaneTick($)
@@ -383,6 +432,9 @@ export const register: Register = (on, options) => {
       if (feature === 'home') {
         await homeSwitched($, isOnNow)
       }
+      if (feature === 'updates') {
+        await checkForUpdate($).catch(() => undefined)
+      }
       if (feature === 'ledger') {
         if (isOnNow) {
           await touch($, {}, me === null ? await findPlace($) : undefined)
@@ -442,6 +494,8 @@ export const register: Register = (on, options) => {
       const place = await findPlace($).catch(() => undefined)
       await setState($, state, place === undefined ? {} : { branch: place.branch }).catch(() => undefined)
       await homeTurnCompleted($, e)
+      // A turn's end is when the person looks at the prompt: a fresh look at the install.
+      await checkForUpdate($).catch(() => undefined)
     }
     return result
   })
@@ -497,35 +551,68 @@ export const register: Register = (on, options) => {
   // ── Drawing: the collision row above the prompt ───────────────────────────
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    if (e.props.hasSurvey || !(await isOn($, 'radar'))) {
+    if (e.props.hasSurvey) {
       return next(e)
     }
-    const hidden = new Set(await read($, dismissed))
-    const shown = (await read($, collisions)).filter(c => !hidden.has(collisionKey(c)))
-    if (shown.length === 0) {
+    const { Box, Button, Text } = $.ui.resolve(e)
+    const rows = []
+
+    // A newer Clarity on disk: offer the reload, one press and Enter away.
+    const pending = (await isOn($, 'updates')) ? ((await read($, pendingUpdate)) as PendingUpdate | null) : null
+    if (pending !== null && pending.signature !== (await read($, updateDismissed))) {
+      rows.push(
+        <Box key="update" flexDirection="row" flexWrap="wrap" columnGap={2}>
+          <Text dimColor>↻ Clarity{pending.version !== null ? ` ${pending.version}` : ''} is installed</Text>
+          <Button
+            key="reload-clarity"
+            plain
+            onPress={async () => {
+              await $.prompt.fill({ text: '/reload-plugins', mode: 'replace' })
+              $.ui.toast('Press Enter to load the new Clarity into this session', { timeoutMs: 6000 })
+            }}
+          >
+            Reload
+          </Button>
+          <Button key="dismiss-update" plain dimColor onPress={() => update($, updateDismissed, () => pending.signature)}>
+            later
+          </Button>
+        </Box>,
+      )
+    }
+
+    // Collision radar: another session edits a file this one edited.
+    if (await isOn($, 'radar')) {
+      const hidden = new Set(await read($, dismissed))
+      const shown = (await read($, collisions)).filter(c => !hidden.has(collisionKey(c)))
+      if (shown.length > 0) {
+        const files = [...new Set(shown.map(c => c.file))]
+        const first = shown[0]
+        const others = new Set(shown.map(c => c.otherId)).size
+        rows.push(
+          <Box key="collisions" flexDirection="row" flexWrap="wrap" columnGap={2}>
+            <Text color="warning">
+              ⚠ {files.length === 1 ? files[0] : `${files.length} files`} also edited by{' '}
+              {others === 1 ? 'another session' : `${others} other sessions`}
+              {others === 1 && first?.otherBranch != null ? <Text dimColor> on {first.otherBranch}</Text> : ''}
+            </Text>
+            <Button
+              key="dismiss-collisions"
+              plain
+              dimColor
+              onPress={() => update($, dismissed, list => [...new Set([...list, ...shown.map(collisionKey)])])}
+            >
+              dismiss
+            </Button>
+          </Box>,
+        )
+      }
+    }
+
+    const [only] = rows
+    if (only === undefined) {
       return next(e) // All quiet: draw nothing.
     }
-    const { Box, Button, Text } = $.ui.resolve(e)
-    const files = [...new Set(shown.map(c => c.file))]
-    const first = shown[0]
-    const others = new Set(shown.map(c => c.otherId)).size
-    return (
-      <Box flexDirection="row" flexWrap="wrap" columnGap={2}>
-        <Text color="warning">
-          ⚠ {files.length === 1 ? files[0] : `${files.length} files`} also edited by{' '}
-          {others === 1 ? 'another session' : `${others} other sessions`}
-          {others === 1 && first?.otherBranch != null ? <Text dimColor> on {first.otherBranch}</Text> : ''}
-        </Text>
-        <Button
-          key="dismiss-collisions"
-          plain
-          dimColor
-          onPress={() => update($, dismissed, list => [...new Set([...list, ...shown.map(collisionKey)])])}
-        >
-          dismiss
-        </Button>
-      </Box>
-    )
+    return rows.length === 1 ? only : <Box flexDirection="column">{rows}</Box>
   })
 
   // ── Drawing: the factory floor pane ───────────────────────────────────────

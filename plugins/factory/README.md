@@ -68,6 +68,13 @@ The wait is a setting: **Open Home after you've been away**, in Factory's plugin
 in Claude Desktop. Pick 10, 15, 20 (the default), 30, 45, 60, 90 or 120 minutes, or
 **off** so Home only opens when you ask for it. Every session follows the same setting.
 
+**Updates.** After you update Clarity (`npx github:swperb/clarity update`), every open
+session notices within a minute and shows a quiet row above the prompt:
+`↻ Clarity 1.1.0 is installed`, with **Reload** and **later**. **Reload** puts
+`/reload-plugins` in the prompt box; press Enter and that session switches to the new
+version, with no need to quit Claude Desktop. A toast confirms it. Claude Desktop only
+runs `/reload-plugins` when you send it, so Factory can't reload a session by itself.
+
 ## Settings
 
 ```
@@ -82,7 +89,7 @@ in Claude Desktop. Pick 10, 15, 20 (the default), 30, 45, 60, 90 or 120 minutes,
 /factory tint on
 ```
 
-Features: `ledger`, `notify`, `tint`, `radar`, `home`. If another plugin already has
+Features: `ledger`, `notify`, `tint`, `radar`, `home`, `updates`. If another plugin already has
 `/home`, use `/factory home`. Switching `ledger` off takes this
 session off every floor at once; the pane still shows the others.
 
@@ -101,6 +108,10 @@ what it cost), the questions it asked, the permission prompts it waited on, erro
 the commit messages and pushes it ran. A journal keeps a week and 300 lines at most. One
 shared file, `~/.claude/factory/presence.json`, holds when you were last active and when
 you were last away. Neither holds what you typed.
+
+For updates, Factory reads `~/.claude/plugins/installed_plugins.json` when a session
+starts, after each turn and with every heartbeat, and compares the `@clarity` entries'
+versions and commits with the ones the session loaded.
 
 ## Notes
 

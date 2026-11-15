@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- **Factory: updates reach open sessions without quitting Claude Desktop.** After
+  `npx github:swperb/clarity update`, every open session notices the new version within
+  a minute and shows a quiet row above the prompt, `↻ Clarity X is installed`. Press
+  **Reload** and then Enter to run `/reload-plugins` in that session. A toast confirms
+  the switch, and **later** hides the row until the next update. Switch it off with
+  `/factory updates off`. Claude Desktop only runs `/reload-plugins` when you send it, so
+  a session can't reload itself.
+
 ## 1.1.0 (2026-11-15)
 
 - **Factory: Home, a briefing for when you come back.** `/home` opens a pane that
