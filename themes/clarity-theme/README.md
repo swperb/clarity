@@ -35,6 +35,16 @@ Claude Desktop: click **+** next to the prompt box → **Plugins** → **Add mar
 The app derives each role's full scale from these seeds, tuning lightness per mode.
 Diff and git colors are left as the app's own.
 
+## Using another theme instead
+
+Clarity's plugins work with any theme. If you install another theme plugin, the Clarity
+theme steps aside and leaves that theme in place, whichever one loads first.
+Workbench, Factory and Studio draw with the app's meaning-based colors (success, error,
+warning, diff green and red), so they take on the other theme's colors as they are.
+Factory's project tint is laid over that theme instead of replacing it.
+
+To go back to Clarity, disable or remove the other theme plugin and start a new session.
+
 Made for Claude Desktop.
 
 ## License

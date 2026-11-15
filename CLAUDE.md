@@ -64,5 +64,13 @@ CI (`.github/workflows/test.yml`) runs `npm test` on Linux, macOS and Windows, N
 - **MCP tools count too**: file and test work may arrive through other servers'
   tools (`path` + `old_string`/`new_string` or `content`, `run_checks`); see
   `classifyMcpTool` in `plugins/workbench/hooks/lib.ts`.
+- **`$.theme` is core from engine 2.1.321.** On an older engine a plugin that hooks
+  `theme.set` doesn't load at all (Factory would lose everything), so Factory and both
+  themes declare `"engines": { "claude-code": ">=2.1.321" }`. Tests answer the
+  `theme.set` / `theme.clear` events; the newer kit refuses an `engine.create` stand-in
+  for `$.theme`, the older kit needs one, so the tests carry both.
+- **Run plugin tests with Desktop's own engine too**: the `claude` on PATH can lag the
+  one Desktop bundles (`~/Library/Application Support/Claude/claude-code/<version>/`),
+  and theme tests once passed only on the older one.
 - Unit tests that pass are not proof: check new behavior live in a Desktop session
   before releasing.

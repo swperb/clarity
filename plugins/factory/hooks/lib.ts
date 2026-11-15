@@ -1,8 +1,8 @@
 // Pure helpers: no `$`, so they are easy to test and reason about.
-import type { ThemeSetArgs } from 'claude-code'
+import type { ThemeColors, ThemeSetArgs } from 'claude-code'
 
 import type { Collision, Entry, Limit, Place, SessionState } from '../types'
-import { makeColors } from './make-colors.js'
+import { checkColors, makeColors } from './make-colors.js'
 
 export const STALE_MS = 10 * 60 * 1000
 const STATES: readonly SessionState[] = ['working', 'waiting', 'idle', 'failed', 'ended']
@@ -279,4 +279,64 @@ export function tintFor(project: string): { look: ThemeSetArgs; problems: string
     },
   })
   return { look: { colors: theme }, problems }
+}
+
+/** True when Desktop would throw a whole look away. */
+export function isUnpaintable(problems: readonly string[]): boolean {
+  return problems.some(line => line.startsWith("Desktop won't paint"))
+}
+
+/**
+ * The project's tint laid over a theme someone else chose (another plugin's
+ * `$.theme.set`), so Factory adapts to it instead of replacing it.
+ *
+ * Only the `role-accent-*` colors change, refitted to that theme's own grays so
+ * the accent keeps contrast on its surfaces; its surfaces, text, other roles,
+ * diff colors, backdrop and color scheme all stay as given. A theme with no
+ * `colors` (a backdrop alone) gets the full project wash under its backdrop.
+ * When the layered palette wouldn't paint, the theme comes back untouched:
+ * the person's chosen look always wins over the tint.
+ */
+export function layerTint(base: ThemeSetArgs, project: string): ThemeSetArgs {
+  const colors = base.colors
+  if (colors === undefined) {
+    const { look, problems } = tintFor(project)
+    return isUnpaintable(problems) ? base : { ...base, colors: look.colors }
+  }
+  const accent = hsl(hueOf(project), 60, 45)
+  const inputs: ThemeColors['inputs'] = {}
+  for (const mode of ['light', 'dark'] as const) {
+    const given = colors.inputs[mode]
+    if (given === undefined) {
+      continue // A theme made for one mode stays a theme for one mode.
+    }
+    const stops: Record<number, string> = {}
+    for (const [key, hex] of Object.entries(given)) {
+      const gray = /^gray-(\d+)$/.exec(key)
+      if (gray !== null) {
+        stops[Number(gray[1])] = hex
+      }
+    }
+    const hasGrays = Object.keys(stops).length > 0
+    let fitted: ThemeColors
+    try {
+      fitted = makeColors({
+        label: 'tint',
+        roles: { accent },
+        [mode]: hasGrays ? { gray: { stops } } : {},
+        only: mode,
+      }).theme
+    } catch {
+      return base // Grays makeColors can't read: leave the theme alone.
+    }
+    const layered: ThemeColors['inputs'][typeof mode] = { ...given }
+    for (const [key, hex] of Object.entries(fitted.inputs[mode] ?? {})) {
+      if (key.startsWith('role-accent-')) {
+        layered[key] = hex
+      }
+    }
+    inputs[mode] = layered
+  }
+  const merged: ThemeColors = { ...colors, inputs }
+  return isUnpaintable(checkColors(merged)) ? base : { ...base, colors: merged }
 }

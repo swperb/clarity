@@ -13,6 +13,7 @@ import {
   readLegacy,
   SOURCE,
   commandFor,
+  everything,
   initialSelection,
   parseArgs,
   plan,
@@ -84,7 +85,7 @@ function pick(catalog, state, selected) {
       const conflict = themeConflict(catalog, selected)
       lines.push('')
       if (conflict) {
-        lines.push(paint('33', `  Only one theme paints at a time; the last loaded wins (${conflict.join(', ')}).`))
+        lines.push(paint('33', `  Only one theme paints at a time (${conflict.join(', ')}): the Clarity theme steps aside for the other.`))
       }
       lines.push(dim('  ↑/↓ move · space toggle · a all · n none · enter apply · q quit'))
       out.write(`${lines.join('\n')}\n`)
@@ -225,7 +226,7 @@ async function main() {
 
   let selected
   if (args.all) {
-    selected = new Set(catalog.plugins.map(p => p.name))
+    selected = everything(catalog)
   } else if (args.only) {
     selected = new Set(args.only)
   } else if (tty) {

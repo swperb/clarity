@@ -4,7 +4,7 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 
-import { cmdQuote, commandFor, initialSelection, legacySteps, parseArgs, plan, readCatalog, readLegacy, readState, themeConflict } from './suite.mjs'
+import { cmdQuote, commandFor, everything, initialSelection, legacySteps, parseArgs, plan, readCatalog, readLegacy, readState, themeConflict } from './suite.mjs'
 import { fakeClaude } from './fake-claude.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -67,6 +67,14 @@ test('parses flags and refuses bad ones', () => {
   assert.throws(() => parseArgs(['--scope', 'everywhere']), /--scope must be/)
   assert.throws(() => parseArgs(['--all', '--only', 'x']), /not both/)
   assert.throws(() => parseArgs(['--frobnicate']), /Unknown option/)
+})
+
+test('a first run and --all pick every plugin but only the first theme', () => {
+  const two = { ...catalog, plugins: [...catalog.plugins, { name: 'neon-noir', kind: 'theme', description: '' }] }
+  assert.deepEqual([...everything(two)], ['clarity-theme', 'workbench', 'factory'])
+  assert.deepEqual([...initialSelection(two, new Map())], ['clarity-theme', 'workbench', 'factory'])
+  const real = readCatalog(ROOT)
+  assert.deepEqual([...everything(real)].filter(n => real.plugins.find(p => p.name === n).kind === 'theme'), ['clarity-theme'])
 })
 
 test('warns when two themes are selected', () => {

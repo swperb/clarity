@@ -19,6 +19,23 @@
 - Factory writes two more small local files for this: a journal per session
   (`~/.claude/factory/journal/`) and when you were last active
   (`~/.claude/factory/presence.json`). Nothing leaves your machine.
+- **Clarity works with any theme.** Install another theme plugin and Clarity adapts to it:
+  - Factory's project tint is laid over your theme instead of replacing it. Only the
+    accent changes, refitted to your theme's grays; surfaces, text, backdrop and diff
+    colors stay yours.
+  - `/factory tint off` restores your theme instead of clearing every theme.
+  - The Clarity theme steps aside when another theme plugin sets a look.
+  - Workbench and Studio already draw with the app's meaning-based colors, so they
+    follow any theme unchanged.
+- **New theme: Neon Noir.** A night city in the rain: blue-black surfaces, electric cyan
+  and hot magenta accents, neon status colors, and a quiet animated skyline along the
+  top of the window. Dark and light, 7:1 primary text, standard diff colors. It counts as
+  "another theme" to the rest of Clarity, so it doubles as the live check of the above.
+- **Installer:** a first run and `--all` check every plugin and the Clarity theme, not
+  every theme; pick Neon Noir in the picker or with `--only`.
+- **Needs Claude Desktop's engine 2.1.321 or later** for Factory and both themes, which
+  now use the app's theme events. They say so in `engines`, so an older app keeps the
+  version that works there instead of loading a Factory that can't start.
 
 ## 1.0.3 (2026-11-15)
 

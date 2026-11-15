@@ -11,6 +11,11 @@
       "description": "A calm, high-legibility theme for Claude Desktop: colorblind-safe status colors, strong focus rings, easy on the eyes for long sessions."
     },
     {
+      "name": "neon-noir",
+      "source": "./themes/neon-noir",
+      "description": "A neon-noir theme for Claude Desktop: blue-black night surfaces, electric cyan and hot magenta accents, and a quiet skyline in the rain behind the chat. Light and dark."
+    },
+    {
       "name": "workbench",
       "source": "./plugins/workbench",
       "description": "Quiet productivity: an attention band for failing tests, uncommitted work and context fill; a risky-command guard; a changed-files pane; a usage chip that explains time, cost and context when clicked."

@@ -89,14 +89,24 @@ export function commandFor(step, marketplace, scope) {
   return ['plugin', step.action, id, '--scope', scope]
 }
 
-/** What starts checked in the picker: everything on a first install, else what's enabled now. */
+/** What starts checked in the picker: everything (one theme) on a first install, else what's enabled now. */
 export function initialSelection(catalog, state, legacy = []) {
   if (legacy.length > 0 && state.size === 0) {
     // Moving from the old names: keep exactly what was enabled there.
     return new Set(legacy.filter(l => l.enabled).map(l => l.name).filter(n => catalog.plugins.some(p => p.name === n)))
   }
   const enabled = catalog.plugins.filter(p => state.get(p.name)?.enabled).map(p => p.name)
-  return new Set(state.size === 0 ? catalog.plugins.map(p => p.name) : enabled)
+  return state.size === 0 ? everything(catalog) : new Set(enabled)
+}
+
+/**
+ * Everything, as a first install and `--all` mean it: every plugin and one theme,
+ * the first listed (the Clarity theme). Only one theme paints, so the others are
+ * there to pick, not to install by default.
+ */
+export function everything(catalog) {
+  const firstTheme = catalog.plugins.find(p => p.kind === 'theme')
+  return new Set(catalog.plugins.filter(p => p.kind !== 'theme' || p === firstTheme).map(p => p.name))
 }
 
 /** More than one theme selected: only one can paint at a time. */
@@ -107,13 +117,13 @@ export function themeConflict(catalog, selected) {
 
 export const HELP = `Clarity installer
 
-  npx github:${SOURCE}                 pick what to install (everything is checked)
+  npx github:${SOURCE}                 pick what to install (every plugin and the Clarity theme are checked)
   npx github:${SOURCE} config          change what's installed later (same picker)
   npx github:${SOURCE} update          update every installed Clarity plugin to the latest
   npx github:${SOURCE} uninstall       remove every Clarity plugin and the marketplace
 
 Options
-  --all                 install or enable everything, no picker
+  --all                 install or enable every plugin and the Clarity theme, no picker
   --only a,b            install or enable just these (others are disabled)
   --remove              uninstall what you uncheck instead of disabling it
   --scope <scope>       user (default), project or local
