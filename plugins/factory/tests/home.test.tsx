@@ -1,4 +1,4 @@
-import type { On } from 'claude-code'
+import type { On, ThemeSetArgs } from 'claude-code'
 import { expect, mock, test } from 'claude-code/testing'
 
 import type { Entry, Journal, Presence } from '../types'
@@ -209,7 +209,25 @@ function world(on: On, id = 'me', cwd = '/code/atlas'): World {
   on('classic.StopFailure', () => ({}))
   on('classic.PermissionRequest', () => ({}))
   on('tool.call', () => ({ result: {} }))
+  themes(on)
   return w
+}
+
+/**
+ * Factory hooks `theme.set`, so its hooks load only where `$.theme` exists. From
+ * engine 2.1.321 it is core and a test answers its events; older test kits have
+ * none, so one is added for them too (the newer kit skips that).
+ */
+function themes(on: On): void {
+  on('theme.set', () => ({ value: { isDrawn: true, requestId: 'theme' } }))
+  on('theme.clear', () => ({ value: { isDrawn: false, reason: 'cleared' } }))
+  on('engine.create', async (_, e, next) => ({
+    ...(await next(e)),
+    theme: {
+      set: async (_look: ThemeSetArgs) => ({ isDrawn: true as const, requestId: 'theme' }),
+      clear: async () => ({ isDrawn: false as const, reason: 'cleared' }),
+    },
+  }))
 }
 
 function journalOf(w: World, id = 'me'): Journal | undefined {
