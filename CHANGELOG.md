@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.2 (2026-11-15)
+
+- **Workbench's risky-command guard now actually stops risky commands.** In 1.0.0 and
+  1.0.1 it hooked a permission step that real sessions never route to plugins, so it
+  never fired outside the tests. It now asks you directly, before the command runs
+  ("Workbench: this command force-pushes… Run it?", with **Don't run it** / **Run it
+  anyway**). A saved "always allow" or a permissive mode can't wave a risky command
+  through, and with nobody to ask (a headless run) the command is refused. Verified live.
+- The guard ignores the text of here-documents (file contents, script input), so
+  writing a README that mentions `git reset --hard` doesn't ask; it now also catches
+  sweeping deletes inside quoted strings like `bash -c "rm -rf ~"`.
+
 ## 1.0.1 (2026-11-14)
 
 - **Installer works on Windows.** `claude` is a `.cmd` shim there, which Node only starts

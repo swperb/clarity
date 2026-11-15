@@ -18,13 +18,16 @@ but works with any theme.
 - `● 7 uncommitted  ↑ 2 unpushed on main`, refreshed after every turn, with a **commit…** shortcut.
 - `◔ Context 82% full` once the context window passes 60%, with a **compact…** shortcut from 75%.
 
-**Risky-command guard.** Before Claude runs a command that's hard to undo, you get a
-permission prompt that says what it does. This happens even in auto mode:
-force-pushes, `git reset --hard`, `git clean -f`, discarding all edits, deleting unmerged
-branches, sweeping `rm -rf` (root, home, `.`, `*`), dropping database tables,
-`curl … | sh`, publishing packages, `terraform destroy`, `kubectl delete`, deleting a
-GitHub repo and more. Everyday commands like `rm -rf node_modules` or
-`git push --force-with-lease` pass through untouched.
+**Risky-command guard.** Before Claude runs a command that's hard to undo, Workbench asks
+you directly what to do (**Don't run it** or **Run it anyway**) and says why it's risky.
+It asks before any permission rule is consulted, so a saved "always allow" or a
+permissive mode (auto, bypass) can't wave it through; with nobody to ask, the command is
+refused. It covers force-pushes, hard resets, `git clean -f`, discarding all edits,
+deleting unmerged branches, sweeping `rm -rf` (root, home, `.`, `*`, also inside
+`bash -c "…"`), dropping database tables, `curl … | sh`, publishing packages,
+`terraform destroy`, `kubectl delete`, deleting a GitHub repo and more. Everyday commands
+like `rm -rf node_modules` or `git push --force-with-lease` pass through untouched, and
+text inside here-documents (a file being written) is treated as data.
 
 **Changed-files pane.** Every file Claude edits this session, newest first, with exact
 `+added −removed` line counts in the standard diff colors and a `new` tag for created files.
@@ -56,7 +59,7 @@ usage figures, off by default because a status line can't be clicked).
 ## Notes
 
 - The band and panes draw in the desktop app and in the terminal.
-- The guard adds a prompt; it never removes one. If your settings already deny a command, it stays denied.
+- The guard adds a question; it never removes one. If your settings already deny a command, it stays denied.
 - Changed files and test runs are tracked from Claude's built-in tools **and** from other MCP servers' file and
   test tools (any tool taking a `path` with `old_string`/`new_string` or `content`, or a `run_checks`-style test tool).
   Changes made by arbitrary shell commands aren't tracked.

@@ -1,6 +1,6 @@
 {
   "name": "clarity",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Clarity for Claude Code: a theme and plugins that make long sessions calmer and more productive. One-command installer.",
   "type": "module",
   "bin": {

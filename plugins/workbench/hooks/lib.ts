@@ -42,7 +42,9 @@ function isSweepingTarget(target: string): boolean {
 }
 
 function rmReason(command: string): string | undefined {
-  for (const segment of command.split(/;|&&|\|\||\||\n/)) {
+  // Also look inside quoted strings, as in `bash -c "rm -rf ~"` or `sh -c '...'`.
+  const quoted = [...command.matchAll(/"([^"]*)"|'([^']*)'/g)].map(m => m[1] ?? m[2] ?? '')
+  for (const segment of [command, ...quoted].flatMap(part => part.split(/;|&&|\|\||\||\n/))) {
     const words = segment.trim().split(/\s+/).filter(w => w !== 'sudo')
     if (words[0] !== 'rm') {
       continue
@@ -57,7 +59,17 @@ function rmReason(command: string): string | undefined {
 }
 
 /** Why a command is risky, in a phrase that follows "This command …", or undefined. */
-export function riskOf(command: string): string | undefined {
+/**
+ * The command without here-document bodies. A heredoc's body is data handed
+ * to a program (a file's text, a script's input), not commands for the shell,
+ * so a README that mentions `git reset --hard` shouldn't trip the guard.
+ */
+export function withoutHeredocs(command: string): string {
+  return command.replace(/<<-?\s*(['"]?)([A-Za-z_][\w]*)\1[^\n]*\n[\s\S]*?\n\s*\2(?=\s*$|\s*\n)/gm, match => match.split('\n')[0] ?? '')
+}
+
+export function riskOf(fullCommand: string): string | undefined {
+  const command = withoutHeredocs(fullCommand)
   const rm = rmReason(command)
   if (rm !== undefined) {
     return rm

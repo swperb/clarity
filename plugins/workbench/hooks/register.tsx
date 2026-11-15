@@ -219,17 +219,30 @@ export const register: Register = on => {
   // A plugin's `ask` always goes to a person, even in auto mode, so the
   // dialog appears with our reason. A deny from beneath stands.
 
-  on('tool.check', { tool: 'Bash' }, async ($, e, next) => {
-    const verdict = await next(e)
-    const command = (e.input as { command?: unknown } | undefined)?.command
-    if (verdict.decision === 'deny' || typeof command !== 'string' || !(await isOn($, 'guard'))) {
-      return verdict
+  // The guard asks the person directly, on the tool call itself, before the
+  // command runs and before any permission rule is consulted: a saved "always
+  // allow" or a permissive mode never waves a risky command through. When
+  // nobody can answer (a headless run), the command is refused.
+  const RUN = 'Run it anyway'
+  const STOP = "Don't run it"
+  on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
+    const reason = (await isOn($, 'guard')) ? riskOf(e.command) : undefined
+    if (reason === undefined) {
+      return next(e)
     }
-    const reason = riskOf(command)
-    return reason === undefined
-      ? verdict
-      : { decision: 'ask', reason: `Workbench: this command ${reason}. Run it anyway?` }
-  }).catch(($, e, next) => (next.called ? next(e) : { decision: 'ask', reason: 'Workbench guard failed; check this command.' }))
+    let answer: string
+    try {
+      answer = await $.ui.ask(`Workbench: this command ${reason}. Run it?\n\n${e.command}`, {
+        header: 'Risky command',
+        options: [STOP, RUN],
+      })
+    } catch {
+      return { deny: `Workbench blocked this command because it ${reason}, and nobody was available to approve it.` }
+    }
+    return answer === RUN
+      ? next(e)
+      : { deny: `Workbench: the user chose not to run this command because it ${reason}. Ask before trying another way.` }
+  }).catch(($, e, next) => (next.called ? next(e) : { deny: 'Workbench guard failed, so this risky command was not run.' }))
 
   // ── 2. Test results, for the band ─────────────────────────────────────────
 

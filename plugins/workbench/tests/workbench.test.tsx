@@ -22,22 +22,77 @@ const BAND = {
   props: { hasSurvey: false, isCollapsed: false, isWorking: false, maxRows: 10, bodyColumns: 80, scroll: { offset: 0, bodyRows: 10 } },
 } as const
 
-test('the guard asks before a force-push and leaves a plain push alone', async ($, on) => {
-  on('tool.check', () => ({ decision: 'allow' }))
 
-  const risky = await $.tool.check({ tool: 'Bash', input: { command: 'git push --force origin main' } })
-  expect(risky.decision).toBe('ask')
-  expect(risky.reason).toContain('force-pushes')
+/** Stands in for the app: answers Workbench's question with `choice`, or throws (nobody there). */
+function app(choice: string | null, asked: string[], ran: string[]) {
+  return (_: unknown, e: { tool: string; command?: string; questions?: { question: string }[] }) => {
+    if (e.tool === 'AskUserQuestion') {
+      const q = e.questions?.[0]?.question ?? ''
+      asked.push(q)
+      if (choice === null) {
+        throw new Error('no one to ask')
+      }
+      return { result: { questions: e.questions, answers: { [q]: choice } } }
+    }
+    ran.push(String(e.command))
+    return { result: {} }
+  }
+}
 
-  const safe = await $.tool.check({ tool: 'Bash', input: { command: 'git push origin main' } })
-  expect(safe.decision).toBe('allow')
+test('the guard asks before a force-push, and denying it stops the command', async ($, on) => {
+  const asked: string[] = []
+  const ran: string[] = []
+  on('clock.now', () => ({ value: 1000 }))
+  on('tool.call', app("Don't run it", asked, ran))
+
+  const result = await $.tool.call({ tool: 'Bash', command: 'git push --force origin main' })
+  expect(asked.length).toBe(1)
+  expect(asked[0]).toContain('force-pushes')
+  expect(result.deny).toContain('force-pushes')
+  expect(ran.includes('git push --force origin main')).toBe(false)
 })
 
-test('the guard never loosens a deny from beneath', async ($, on) => {
-  on('tool.check', () => ({ decision: 'deny', reason: 'blocked by rule' }))
+test('approving the guard runs the command; a safe command never asks', async ($, on) => {
+  const asked: string[] = []
+  const ran: string[] = []
+  on('clock.now', () => ({ value: 1000 }))
+  on('tool.call', app('Run it anyway', asked, ran))
 
-  const verdict = await $.tool.check({ tool: 'Bash', input: { command: 'rm -rf ~' } })
-  expect(verdict.decision).toBe('deny')
+  await $.tool.call({ tool: 'Bash', command: 'git push --force origin main' })
+  await $.tool.call({ tool: 'Bash', command: 'git push origin main' })
+  expect(asked.length).toBe(1)
+  expect(ran).toEqual(['git push --force origin main', 'git push origin main'])
+})
+
+test('with nobody to ask, the guard refuses', async ($, on) => {
+  const ran: string[] = []
+  on('clock.now', () => ({ value: 1000 }))
+  on('tool.call', app(null, [], ran))
+
+  const result = await $.tool.call({ tool: 'Bash', command: 'rm -rf ~' })
+  expect(result.deny).toContain('nobody was available')
+  expect(ran.length).toBe(0)
+})
+
+test('text inside a heredoc is data: describing risky commands does not ask', async ($, on) => {
+  const asked: string[] = []
+  const ran: string[] = []
+  on('clock.now', () => ({ value: 1000 }))
+  on('tool.call', app('Run it anyway', asked, ran))
+
+  await $.tool.call({ tool: 'Bash', command: "cat > README.md <<'EOF'\nThe guard covers git reset --hard.\nEOF" })
+  expect(asked.length).toBe(0)
+  expect(ran.length).toBe(1)
+})
+
+test('a risky command inside bash -c still asks', async ($, on) => {
+  const asked: string[] = []
+  on('clock.now', () => ({ value: 1000 }))
+  on('tool.call', app("Don't run it", asked, []))
+
+  const result = await $.tool.call({ tool: 'Bash', command: 'bash -c "rm -rf ~"' })
+  expect(asked.length).toBe(1)
+  expect(result.deny).toContain('deletes')
 })
 
 test('the band shows a failing test run, and nothing when all is quiet', async ($, on) => {
