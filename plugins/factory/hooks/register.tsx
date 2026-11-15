@@ -267,8 +267,8 @@ async function openPane($: Engine): Promise<void> {
 
 // ── Register ────────────────────────────────────────────────────────────────
 
-export const register: Register = on => {
-  registerHome(on)
+export const register: Register = (on, options) => {
+  registerHome(on, options)
 
   on('session.start', async ($, e, next) => {
     const enabled = await loadFeatures($)

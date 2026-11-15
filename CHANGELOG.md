@@ -12,8 +12,10 @@
   one starts from there.
 - **Hibernation.** After 20 minutes with no sign of you (no typing, prompts or presses in
   any session), Factory marks you away and every session opens Home, so it's the first
-  thing you see when you're back. Change the wait with `/home hibernate <minutes>`, or
-  `/home hibernate off`. Switch the whole feature with `/factory home on|off`.
+  thing you see when you're back. The wait is a Factory setting, **Open Home after
+  you've been away**: 10 to 120 minutes, or **off**. `/home hibernate <minutes|off>`
+  changes the same setting from the prompt. Switch the whole feature with
+  `/factory home on|off`.
 - Factory writes two more small local files for this: a journal per session
   (`~/.claude/factory/journal/`) and when you were last active
   (`~/.claude/factory/presence.json`). Nothing leaves your machine.

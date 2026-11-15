@@ -11,6 +11,16 @@ export const JOURNAL_MAX = 300
 export const JOURNAL_DAYS = 7
 
 export const DEFAULT_HIBERNATE_MINUTES = 20
+/** The Hibernation setting's choices, as the manifest's `userConfig.hibernate.options` lists them. */
+export const HIBERNATE_CHOICES = ['off', '10', '15', '20', '30', '45', '60', '90', '120'] as const
+
+/** The setting's value as minutes; 0 is off. Anything unknown reads as the default. */
+export function hibernateMinutesOf(setting: unknown): number {
+  if (setting === 'off') {
+    return 0
+  }
+  return typeof setting === 'string' && (HIBERNATE_CHOICES as readonly string[]).includes(setting) ? Number(setting) : DEFAULT_HIBERNATE_MINUTES
+}
 
 // ── Reading files ───────────────────────────────────────────────────────────
 

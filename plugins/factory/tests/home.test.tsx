@@ -323,20 +323,47 @@ test('after twenty quiet minutes Home opens itself, and Got it ends the briefing
   await ui.unmount()
 })
 
-test('/home hibernate changes the wait, or turns it off', async ($, on) => {
+const homeCmd = (args: string) => ({ command: 'home', args, origin: composer, presentation: { isFullscreen: false, columns: 120 } }) as const
+
+test('the wait comes from Factory\'s settings', { options: { hibernate: '45' } }, async ($, on) => {
   const clock = mock.clock(on, { now: NOW })
   const w = world(on)
   await $.session.start(START)
-  const home = (args: string) => ({ command: 'home', args, origin: composer, presentation: { isFullscreen: false, columns: 120 } }) as const
-
-  expect((await $.command.run(home('hibernate 45'))).text).toContain('45 minutes')
-  await clock.advance(30 * MIN)
+  await clock.advance(44 * MIN)
   expect(w.opened).toEqual([])
-  await clock.advance(16 * MIN)
+  await clock.advance(MIN)
   expect(w.opened).toEqual(['factory-home'])
+  expect((await $.command.run(homeCmd('hibernate'))).text).toContain('after 45 minutes')
+})
 
-  expect((await $.command.run(home('hibernate off'))).text).toContain('off')
-  expect((await $.command.run(home('hibernate soon'))).text).toContain('/home hibernate <minutes>')
+test('hibernation set to off never opens Home by itself', { options: { hibernate: 'off' } }, async ($, on) => {
+  const clock = mock.clock(on, { now: NOW })
+  const w = world(on)
+  await $.session.start(START)
+  await clock.advance(6 * 60 * MIN)
+  expect(w.opened).toEqual([])
+  expect(presenceOf(w)?.awaySince).toBe(null)
+  expect((await $.command.run(homeCmd('hibernate'))).text).toContain('Hibernation is off')
+  // /home still opens it on request.
+  await $.command.run(homeCmd(''))
+  expect(w.opened).toEqual(['factory-home'])
+})
+
+test('/home hibernate changes the same setting, and only to a listed choice', async ($, on) => {
+  mock.clock(on, { now: NOW })
+  world(on)
+  const set: unknown[] = []
+  on('config.set', (_, e) => (set.push([e.key, e.value]), { value: e.value }))
+  await $.session.start(START)
+
+  expect((await $.command.run(homeCmd('hibernate 30'))).text).toContain('30 minutes')
+  expect((await $.command.run(homeCmd('hibernate off'))).text).toContain('Hibernation is off')
+  expect(set).toEqual([
+    ['factory.hibernate', '30'],
+    ['factory.hibernate', 'off'],
+  ])
+  expect((await $.command.run(homeCmd('hibernate 25'))).text).toContain('Choose one of: off, 10, 15, 20, 30')
+  expect(set.length).toBe(2)
 })
 
 test('the pane draws on every surface, and its widget is one line', async ($, on) => {

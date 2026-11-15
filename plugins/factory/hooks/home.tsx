@@ -3,11 +3,11 @@
 // presence file says when you were last seen; after a stretch of quiet
 // ("hibernation") every session opens the home pane, ready for your return.
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface as Engine, On, Timer } from 'claude-code'
+import type { EngineInterface as Engine, On, PluginOptions, Timer } from 'claude-code'
 
 import type { Feature, Journal, JournalEvent, Presence } from '../types'
 import {
-  DEFAULT_HIBERNATE_MINUTES,
+  HIBERNATE_CHOICES,
   appendEvent,
   answerGist,
   brief,
@@ -18,6 +18,7 @@ import {
   gitWork,
   greeting,
   hibernate,
+  hibernateMinutesOf,
   homeGlance,
   isAway,
   parseJournal,
@@ -32,7 +33,8 @@ import { formatCost, formatDuration, hsl, hueOf, startOfDay } from './lib'
 import { factoryDir, readLedger } from './shared'
 
 export const HOME_PANE = 'factory-home'
-const HIBERNATE_KEY = 'hibernateMinutes'
+/** The Hibernation row in Factory's settings: `userConfig.hibernate` in the manifest. */
+const HIBERNATE_SETTING = 'factory.hibernate'
 const TICK_MS = 60_000
 const PANE_REFRESH_MS = 5_000
 /** Presence is written at most this often while you're active. */
@@ -147,10 +149,9 @@ async function waitingOn($: Engine, text: string): Promise<void> {
 
 // ── Presence and hibernation ────────────────────────────────────────────────
 
-async function hibernateMinutes($: Engine): Promise<number> {
-  const saved = await $.store.get(HIBERNATE_KEY)
-  return typeof saved === 'number' && saved >= 0 ? saved : DEFAULT_HIBERNATE_MINUTES
-}
+// From the plugin's settings. A change there reloads the module, so this is
+// always the value in force.
+let hibernateAfter = hibernateMinutesOf(undefined)
 
 /** The person did something here. Cheap when called often: writes at most every 15s. */
 async function markSeen($: Engine): Promise<void> {
@@ -177,7 +178,7 @@ async function hibernationTick($: Engine): Promise<void> {
   }
   const t = await now($)
   let p = (await readPresence($)) ?? (await read($, presence)) ?? seen(null, t)
-  const minutes = await hibernateMinutes($)
+  const minutes = hibernateAfter
   const asleep = minutes > 0 ? hibernate(p, t, minutes * MIN) : undefined
   if (asleep !== undefined) {
     p = asleep
@@ -319,7 +320,9 @@ export async function homeTurnCompleted($: Engine, e: { reason: string; answer: 
 
 // ── Register: the hooks only Home has ───────────────────────────────────────
 
-export function registerHome(on: On): void {
+export function registerHome(on: On, options: PluginOptions): void {
+  hibernateAfter = hibernateMinutesOf(options.hibernate)
+
   on('command.run', { command: 'home' }, async ($, e) => {
     const [word = '', value = ''] = (e.args ?? '').trim().toLowerCase().split(/\s+/)
     if (!(await isOn($, 'home'))) {
@@ -327,19 +330,25 @@ export function registerHome(on: On): void {
     }
     if (word === 'hibernate') {
       if (value === '') {
-        const m = await hibernateMinutes($)
-        return { text: m === 0 ? 'Hibernation is off.' : `Home opens itself after ${m} minutes without you.` }
+        return {
+          text:
+            (hibernateAfter === 0 ? 'Hibernation is off.' : `Home opens itself after ${hibernateAfter} minutes without you.`) +
+            " Change it in Factory's settings (Open Home after you've been away), or with /home hibernate <minutes|off>.",
+        }
       }
-      const minutes = value === 'off' ? 0 : Number(value)
-      if (!Number.isFinite(minutes) || minutes < 0 || minutes > 24 * 60) {
-        return { text: 'Use /home hibernate <minutes>, for example /home hibernate 20, or /home hibernate off.' }
+      if (!(HIBERNATE_CHOICES as readonly string[]).includes(value)) {
+        return { text: `Choose one of: ${HIBERNATE_CHOICES.join(', ')}. For example /home hibernate 30, or /home hibernate off.` }
       }
-      await $.store.set(HIBERNATE_KEY, Math.round(minutes))
+      // The same row as Factory's settings, so the two never disagree.
+      const set = await $.config.set({ key: HIBERNATE_SETTING, value }).catch(() => ({ deny: 'unavailable' }))
+      if ('deny' in set && set.deny !== undefined) {
+        return { text: "Couldn't change it from here. Change it in Factory's settings: Open Home after you've been away." }
+      }
       return {
         text:
-          minutes === 0
+          value === 'off'
             ? 'Hibernation is off. Open Home yourself with /home.'
-            : `Home now opens itself after ${Math.round(minutes)} minutes without you, in every session.`,
+            : `Home now opens itself after ${value} minutes without you, in every session.`,
       }
     }
     await markSeen($)

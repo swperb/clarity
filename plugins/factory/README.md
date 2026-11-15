@@ -57,13 +57,18 @@ today** widens the view. Minimized in the desktop app, Home is one line:
 or presses), Factory marks you away and every open session brings up Home, so it's
 waiting when you return. The first thing you do anywhere marks you back.
 
+The wait is a setting: **Open Home after you've been away**, in Factory's plugin settings
+in Claude Desktop. Pick 10, 15, 20 (the default), 30, 45, 60, 90 or 120 minutes, or
+**off** so Home only opens when you ask for it. Every session follows the same setting.
+
 ## Settings
 
 ```
 /factory                   # open the factory floor
 /home                      # open Home: since you left (or since your last briefing)
 /home today                # Home, for all of today
-/home hibernate 30         # open Home after 30 quiet minutes (default 20)
+/home hibernate            # show the hibernation setting
+/home hibernate 30         # the same setting, from the prompt: open Home after 30 quiet minutes
 /home hibernate off        # never open Home by itself
 /factory settings          # list features and whether each is on
 /factory tint off          # switch one off (remembered across sessions)
@@ -99,7 +104,7 @@ you were last away. Neither holds what you typed.
 - Edits are the ones Claude makes with its file tools. Changes made by shell commands aren't tracked.
 - Home counts you as present when you type, send a prompt or press something in a
   Factory pane. Reading without touching anything for 20 minutes counts as away; raise the
-  wait with `/home hibernate <minutes>` if that's too soon for you.
+  wait in Factory's settings (or `/home hibernate <minutes>`) if that's too soon for you.
 - A session that has ended drops off Home's "Needs you": nobody can answer it any more.
 - Cost "today" adds up every session that was alive at some point today, including ones that started yesterday.
 

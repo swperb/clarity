@@ -71,7 +71,7 @@ command? Use the in-app route below.
 | <img src="plugins/factory/.claude-plugin/icon.png" width="56" alt=""> | [**Factory**](plugins/factory) | One control room for many sessions across many projects: a factory-floor pane, a needs-you queue with one batched notification, a per-project color tint, a radar for two sessions editing the same file, and **Home**, a briefing of what every session did, asked and spent while you were away, which opens itself after 20 quiet minutes. |
 | <img src="plugins/studio/.claude-plugin/icon.png" width="56" alt=""> | [**Studio**](plugins/studio) | A soft IDE beside the chat: the session folder's file tree and a live viewer that follows what Claude reads, edits, searches and runs, with an activity strip. |
 
-Each plugin also has its own in-session settings, for example `/workbench guard off`, `/studio auto off` or `/home hibernate 30`.
+Each plugin also has its own in-session settings, for example `/workbench guard off` or `/studio auto off`. Factory's Home has a plugin setting too: how long you're away before it opens itself (default 20 minutes, or off).
 
 ## Privacy
 
