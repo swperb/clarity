@@ -23,7 +23,7 @@
     {
       "name": "factory",
       "source": "./plugins/factory",
-      "description": "A control room for many concurrent sessions: a factory-floor pane grouped by project, a needs-you queue with one batched notification, a per-project color tint and a collision radar."
+      "description": "A control room for many concurrent sessions: a factory-floor pane grouped by project, a needs-you queue with one batched notification, a per-project color tint, a collision radar, and Home: a briefing of what every session did while you were away."
     },
     {
       "name": "studio",

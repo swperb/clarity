@@ -1,7 +1,24 @@
 # Changelog
 
-## Unreleased
+## 1.1.0 (2026-11-15)
 
+- **Factory: Home, a briefing for when you come back.** `/home` opens a pane that
+  covers every session in every project: what got done (each finished task in a line,
+  with files changed and commits), what still needs you (questions Claude asked, a
+  permission it's waiting on, sessions waiting or failed), what held it up while you
+  were gone (permission waits and how long they lasted, usage limits, errors), what's
+  still running, and usage (spend while you were away and today, your plan's limit
+  windows, sessions whose context is nearly full). **Got it** ends the briefing; the next
+  one starts from there.
+- **Hibernation.** After 20 minutes with no sign of you (no typing, prompts or presses in
+  any session), Factory marks you away and every session opens Home, so it's the first
+  thing you see when you're back. The wait is a Factory setting, **Open Home after
+  you've been away**: 10 to 120 minutes, or **off**. `/home hibernate <minutes|off>`
+  changes the same setting from the prompt. Switch the whole feature with
+  `/factory home on|off`.
+- Factory writes two more small local files for this: a journal per session
+  (`~/.claude/factory/journal/`) and when you were last active
+  (`~/.claude/factory/presence.json`). Nothing leaves your machine.
 - **Clarity works with any theme.** Install another theme plugin and Clarity adapts to it:
   - Factory's project tint is laid over your theme instead of replacing it. Only the
     accent changes, refitted to your theme's grays; surfaces, text, backdrop and diff

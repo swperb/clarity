@@ -38,6 +38,7 @@ function entry(over: Partial<Entry>): Entry {
     cost: 1,
     context: 20,
     files: [],
+    limits: [],
     ...over,
   }
 }

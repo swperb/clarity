@@ -15,29 +15,41 @@ import {
   layerTint,
   liveEntries,
   needsYou,
-  parseEntry,
   placeOf,
   prunable,
   relativeTo,
   taskLine,
   tintFor,
 } from './lib'
+import { factoryDir, ledgerDir, readLedger } from './shared'
+import {
+  homeClosed,
+  homeEnded,
+  homePrompt,
+  homeStart,
+  homeSwitched,
+  homeTurnCompleted,
+  homeTurnStarted,
+  openHome,
+  registerHome,
+} from './home'
 
 // ── State ───────────────────────────────────────────────────────────────────
 // Held by the host for the session, so a hot reload keeps it. Bump a `shape`
 // tag when its type changes: values stored under an old tag read as initial.
 
-const ALL_ON: Features = { ledger: true, notify: true, tint: true, radar: true }
+const ALL_ON: Features = { ledger: true, notify: true, tint: true, radar: true, home: true }
 const FEATURE_INFO: Record<Feature, string> = {
   ledger: 'Heartbeat: this session shows on the factory floor of every other session',
   notify: 'One native notification when more sessions start waiting on you',
   tint: "Project tint: each project's windows wear their own accent color (desktop and mobile)",
   radar: 'Collision radar: warns when another session in the same repo edits a file this one edited',
+  home: 'Home: a briefing of what every session did while you were away; opens itself after you have been idle a while',
 }
 
 const features = atom({ plugin: 'factory', key: 'features' } as const, ALL_ON)
-const self = atom({ plugin: 'factory', key: 'self' } as const, null, { shape: 'entry-1' })
-const floor = atom({ plugin: 'factory', key: 'floor' } as const, [], { shape: 'floor-1' })
+const self = atom({ plugin: 'factory', key: 'self' } as const, null, { shape: 'entry-2' })
+const floor = atom({ plugin: 'factory', key: 'floor' } as const, [], { shape: 'floor-2' })
 const collisions = atom({ plugin: 'factory', key: 'collisions' } as const, [], { shape: 'collisions-1' })
 const dismissed = atom({ plugin: 'factory', key: 'dismissed' } as const, [])
 const isPaneOpen = atom({ plugin: 'factory', key: 'isPaneOpen' } as const, false)
@@ -56,36 +68,12 @@ let paneTick: Timer | undefined
 
 // ── The ledger on disk ──────────────────────────────────────────────────────
 
-async function ledgerDir($: Engine): Promise<string> {
-  const config = await $.env.get('CLAUDE_CONFIG_DIR')
-  const home = await $.env.get('HOME')
-  const base = config !== undefined && config !== '' ? config : `${home ?? '~'}/.claude`
-  return `${base.replace(/\/+$/, '')}/factory/sessions`
-}
-
-async function readLedger($: Engine): Promise<Entry[]> {
-  const dir = await ledgerDir($)
-  if (!(await $.fs.exists(dir))) {
-    return []
-  }
-  const names = (await $.fs.list(dir)).filter(f => f.kind === 'file' && /^[\w-]+\.json$/.test(f.name))
-  const parsed = await Promise.all(
-    names.map(f =>
-      $.fs
-        .read(`${dir}/${f.name}`)
-        .then(text => (typeof text === 'string' ? parseEntry(text) : undefined))
-        .catch(() => undefined),
-    ),
-  )
-  return parsed.filter((e): e is Entry => e !== undefined)
-}
-
 async function writeEntry($: Engine, entry: Entry): Promise<void> {
   await $.fs.write(`${await ledgerDir($)}/${entry.id}.json`, JSON.stringify(entry))
 }
 
 async function isOn($: Engine, feature: Feature): Promise<boolean> {
-  return (await read($, features))[feature]
+  return (await read($, features))[feature] ?? false
 }
 
 // ── This session ────────────────────────────────────────────────────────────
@@ -133,6 +121,7 @@ async function touch($: Engine, patch: Partial<Entry> = {}, place?: Place): Prom
             cost: null,
             context: null,
             files: [],
+            limits: [],
           }
     const next: Entry = {
       ...base,
@@ -141,6 +130,10 @@ async function touch($: Engine, patch: Partial<Entry> = {}, place?: Place): Prom
       heartbeatAt: now,
       cost: usage?.cost?.usd ?? base.cost,
       context: usage?.context.percent ?? base.context,
+      limits:
+        usage !== undefined && usage.rateLimits.length > 0
+          ? usage.rateLimits.map(r => (r.resetsAt === undefined ? { kind: r.kind, percentUsed: r.percentUsed } : { kind: r.kind, percentUsed: r.percentUsed, resetsAt: r.resetsAt }))
+          : base.limits ?? [],
     }
     if (patch.state !== undefined && patch.state !== base.state) {
       next.since = now
@@ -295,14 +288,16 @@ async function openPane($: Engine): Promise<void> {
 
 // ── Register ────────────────────────────────────────────────────────────────
 
-export const register: Register = on => {
+export const register: Register = (on, options) => {
+  registerHome(on, options)
+
   on('session.start', async ($, e, next) => {
     const enabled = await loadFeatures($)
     // A refused name must not throw out of startup: the ledger and tint still run.
     await $.command
       .register({
         name: 'factory',
-        description: 'Open the factory floor, or switch a feature: /factory [settings | ledger|notify|tint|radar on|off]',
+        description: 'Open the factory floor, or switch a feature: /factory [home | settings | ledger|notify|tint|radar|home on|off]',
       })
       .catch(() => $.ui.log('factory: the /factory command could not be registered'))
     const place = await findPlace($)
@@ -314,13 +309,15 @@ export const register: Register = on => {
     if (await read($, isPaneOpen)) {
       startPaneTick($)
     }
+    await homeStart($, e.isInteractive).catch(() => undefined)
     // Tidy the ledger: ended a day ago or silent for a week.
     void (async () => {
       const entries = await readLedger($)
       const old = prunable(entries, await $.clock.now())
       if (old.length > 0) {
         const dir = await ledgerDir($)
-        await $.process.run(['rm', '-f', '--', ...old.map(id => `${dir}/${id}.json`)], { timeoutMs: 5000 })
+        const journals = `${await factoryDir($)}/journal`
+        await $.process.run(['rm', '-f', '--', ...old.flatMap(id => [`${dir}/${id}.json`, `${journals}/${id}.json`])], { timeoutMs: 5000 })
       }
       await refresh($)
     })().catch(() => undefined)
@@ -361,6 +358,14 @@ export const register: Register = on => {
       return { text: 'Opened the factory floor.' }
     }
 
+    if (name === 'home' && state === '') {
+      if (!current.home) {
+        return { text: 'Home is off. Turn it on with /factory home on.' }
+      }
+      await openHome($)
+      return { text: 'Opened Home.' }
+    }
+
     if (name in current && (state === 'on' || state === 'off')) {
       const feature = name as Feature
       const isOnNow = state === 'on'
@@ -374,6 +379,9 @@ export const register: Register = on => {
         } else if (!isOnNow) {
           await clearTint($).catch(() => undefined)
         }
+      }
+      if (feature === 'home') {
+        await homeSwitched($, isOnNow)
       }
       if (feature === 'ledger') {
         if (isOnNow) {
@@ -391,7 +399,7 @@ export const register: Register = on => {
     const lines = (Object.keys(FEATURE_INFO) as Feature[]).map(
       f => `${current[f] ? '●' : '○'} ${f.padEnd(7)} ${FEATURE_INFO[f]}`,
     )
-    return { text: [...lines, '', 'Open the floor with /factory. Switch one with /factory <feature> on|off'].join('\n') }
+    return { text: [...lines, '', 'Open the floor with /factory, Home with /home. Switch one with /factory <feature> on|off'].join('\n') }
   })
 
   on('ui.close', async ($, e, next) => {
@@ -400,6 +408,7 @@ export const register: Register = on => {
       paneTick = undefined
       await update($, isPaneOpen, () => false)
     }
+    await homeClosed($, e.id)
     return next(e)
   })
 
@@ -410,6 +419,7 @@ export const register: Register = on => {
     if (task !== '') {
       await touch($, { task }).catch(() => undefined)
     }
+    await homePrompt($, e).catch(() => undefined)
     return next(e)
   })
 
@@ -418,6 +428,7 @@ export const register: Register = on => {
       const task = taskLine(e.text)
       const patch: Partial<Entry> = task !== '' ? { task } : {}
       await setState($, 'working', patch).catch(() => undefined)
+      await homeTurnStarted($).catch(() => undefined)
     }
     return next(e)
   })
@@ -430,6 +441,7 @@ export const register: Register = on => {
       // The branch may have moved during the turn.
       const place = await findPlace($).catch(() => undefined)
       await setState($, state, place === undefined ? {} : { branch: place.branch }).catch(() => undefined)
+      await homeTurnCompleted($, e)
     }
     return result
   })
@@ -448,6 +460,7 @@ export const register: Register = on => {
       heartbeat?.cancel()
       paneTick?.cancel()
     }
+    homeEnded(e.reason === 'clear')
     const me = await read($, self)
     if (me !== null && me.id === e.sessionId && (await isOn($, 'ledger'))) {
       await writeEntry($, { ...me, state: 'ended', heartbeatAt: await $.clock.now() }).catch(() => undefined)

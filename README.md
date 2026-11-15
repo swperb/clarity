@@ -70,10 +70,10 @@ command? Use the in-app route below.
 | <img src="themes/clarity-theme/.claude-plugin/icon.png" width="56" alt=""> | [**Clarity theme**](themes/clarity-theme) | High legibility, colorblind-safe status colors, standard diff colors, strong keyboard focus rings. Light and dark. |
 | <img src="themes/neon-noir/.claude-plugin/icon.png" width="56" alt=""> | [**Neon Noir**](themes/neon-noir) | A night city in the rain: blue-black surfaces, electric cyan and hot magenta accents, a quiet animated skyline along the top of the window. The same readability rules as Clarity's theme. Dark and light. |
 | <img src="plugins/workbench/.claude-plugin/icon.png" width="56" alt=""> | [**Workbench**](plugins/workbench) | An attention band for failing tests, uncommitted work and a filling context window; a guard that asks before hard-to-undo commands; a changed-files pane; a usage chip that explains time, cost and context when clicked. |
-| <img src="plugins/factory/.claude-plugin/icon.png" width="56" alt=""> | [**Factory**](plugins/factory) | One control room for many sessions across many projects: a factory-floor pane, a needs-you queue with one batched notification, a per-project color tint, and a radar for two sessions editing the same file. |
+| <img src="plugins/factory/.claude-plugin/icon.png" width="56" alt=""> | [**Factory**](plugins/factory) | One control room for many sessions across many projects: a factory-floor pane, a needs-you queue with one batched notification, a per-project color tint, a radar for two sessions editing the same file, and **Home**, a briefing of what every session did, asked and spent while you were away, which opens itself after 20 quiet minutes. |
 | <img src="plugins/studio/.claude-plugin/icon.png" width="56" alt=""> | [**Studio**](plugins/studio) | A soft IDE beside the chat: the session folder's file tree and a live viewer that follows what Claude reads, edits, searches and runs, with an activity strip. |
 
-Each plugin also has its own in-session settings, for example `/workbench guard off` or `/studio auto off`.
+Each plugin also has its own in-session settings, for example `/workbench guard off` or `/studio auto off`. Factory's Home has a plugin setting too: how long you're away before it opens itself (default 20 minutes, or off).
 
 ## Works with any theme
 
@@ -97,7 +97,10 @@ Clarity makes **no network requests**. Everything stays on your machine:
 - **Factory** writes one small status file per session to `~/.claude/factory/sessions/`
   (project folder, branch, state, the first line of your latest prompt, cost and context
   use) so its pane can show all your sessions, and removes files for sessions that have
-  ended. It raises local notifications only.
+  ended. For Home it keeps a week-long journal per session in `~/.claude/factory/journal/`
+  (a line per finished task, the questions Claude asked, what held it up, commits and
+  pushes, cost) and when you were last active in `~/.claude/factory/presence.json`. It
+  raises local notifications only.
 - The **themes** only set colors (and Neon Noir draws its backdrop scene).
 
 ## Install one at a time

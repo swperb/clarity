@@ -1,10 +1,10 @@
 {
   "name": "factory",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "engines": {
     "claude-code": ">=2.1.321"
   },
-  "description": "A control room for many Claude Desktop sessions across many projects: a shared heartbeat, a factory-floor pane, a needs-you queue with one batched notification, a per-project color tint and a collision radar.",
+  "description": "A control room for many Claude Desktop sessions across many projects: a shared heartbeat, a factory-floor pane, a needs-you queue with one batched notification, a per-project color tint, a collision radar, and Home: a briefing of what every session did while you were away.",
   "author": {
     "name": "swperb",
     "url": "https://github.com/swperb"
@@ -17,5 +17,24 @@
   "keywords": [
     "clarity",
     "productivity"
-  ]
+  ],
+  "userConfig": {
+    "hibernate": {
+      "type": "string",
+      "title": "Open Home after you've been away",
+      "description": "Minutes with no typing, prompts or presses in any session before Factory marks you away and opens Home in every session. Off: Home never opens by itself (open it with /home).",
+      "options": [
+        "off",
+        "10",
+        "15",
+        "20",
+        "30",
+        "45",
+        "60",
+        "90",
+        "120"
+      ],
+      "default": "20"
+    }
+  }
 }

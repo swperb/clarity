@@ -1,7 +1,7 @@
 // Pure helpers: no `$`, so they are easy to test and reason about.
 import type { ThemeColors, ThemeSetArgs } from 'claude-code'
 
-import type { Collision, Entry, Place, SessionState } from '../types'
+import type { Collision, Entry, Limit, Place, SessionState } from '../types'
 import { checkColors, makeColors } from './make-colors.js'
 
 export const STALE_MS = 10 * 60 * 1000
@@ -46,6 +46,11 @@ export function parseEntry(text: string): Entry | undefined {
     cost: typeof e.cost === 'number' ? e.cost : null,
     context: typeof e.context === 'number' ? e.context : null,
     files: Array.isArray(e.files) ? e.files.filter((f): f is string => typeof f === 'string') : [],
+    limits: Array.isArray(e.limits)
+      ? e.limits
+          .filter((r): r is Limit => r !== null && typeof r === 'object' && typeof r.kind === 'string' && typeof r.percentUsed === 'number')
+          .map(r => (typeof r.resetsAt === 'string' ? { kind: r.kind, percentUsed: r.percentUsed, resetsAt: r.resetsAt } : { kind: r.kind, percentUsed: r.percentUsed }))
+      : [],
   }
 }
 

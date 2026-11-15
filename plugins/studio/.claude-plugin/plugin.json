@@ -1,6 +1,6 @@
 {
   "name": "studio",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "A soft IDE beside the chat: the session folder's file tree, a live viewer that follows what Claude reads, edits, searches and runs, and an activity strip.",
   "author": {
     "name": "swperb",
