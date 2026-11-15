@@ -30,6 +30,23 @@ export type Entry = {
   files: string[]
 }
 
+/**
+ * A theme another plugin set, kept so the tint can lie over it: `ThemeSetArgs`
+ * as stored (the contract can't import it, so its shape is spelled out loosely).
+ */
+export type BaseTheme = {
+  backdrop?: object
+  overrideColorScheme?: 'light' | 'dark'
+  colors?: {
+    v: 1
+    id?: string
+    label: string
+    inputs: { light?: Record<string, `#${string}`>; dark?: Record<string, `#${string}`> }
+    codeTheme?: { light?: string; dark?: string }
+    contrast?: 'more'
+  }
+}
+
 /** Where this session sits, worked out once at start. */
 export type Place = { project: string; repo: string; root: string; branch: string | null }
 
@@ -46,6 +63,7 @@ declare module 'claude-code' {
       dismissed: string[]
       isPaneOpen: boolean
       notifiedCount: number | null
+      baseTheme: Shaped<BaseTheme | null>
     }
   }
 }

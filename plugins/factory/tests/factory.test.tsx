@@ -1,11 +1,14 @@
-import type { On } from 'claude-code'
+import type { On, ThemeColors, ThemeSetArgs } from 'claude-code'
 import { expect, test } from 'claude-code/testing'
 
 import type { Entry } from '../types'
+import { makeColors } from '../hooks/make-colors.js'
 import {
   collisionsFor,
   glance,
   hueOf,
+  isUnpaintable,
+  layerTint,
   liveEntries,
   needsYou,
   parseEntry,
@@ -115,9 +118,77 @@ test('the tint is stable per project, paints, and leaves diff colors alone', asy
   }
 })
 
+// Someone else's theme, made the way any theme plugin makes one.
+const OTHER = makeColors({
+  label: 'Paper',
+  id: 'paper',
+  roles: { accent: '#2f5d8c', danger: '#b3392f', success: '#4e7d3a', warning: '#a86f14', pro: '#6d4f94' },
+  light: { gray: { anchors: { 'surface-0': '#efe6d3', 'surface-1': '#f4ecdc', 'surface-2': '#faf5e9', 'text-primary': '#2a241d', 'text-muted': '#6a5f50' } } },
+  dark: { gray: { anchors: { 'surface-0': '#1f1a15', 'surface-1': '#28221b', 'surface-2': '#312a22', 'surface-3': '#3a3229', 'text-primary': '#f0e7d7', 'text-muted': '#aca08d' } } },
+}).theme
+
+function changedKeys(a: ThemeColors, b: ThemeColors): string[] {
+  const out: string[] = []
+  for (const mode of ['light', 'dark'] as const) {
+    for (const [k, v] of Object.entries(a.inputs[mode] ?? {})) {
+      if (b.inputs[mode]?.[k] !== v) {
+        out.push(k)
+      }
+    }
+  }
+  return [...new Set(out)]
+}
+
+test("the tint over another theme changes its accent alone and keeps its look", async () => {
+  for (const name of ['atlas', 'harbor', 'Orchard', '']) {
+    const base: ThemeSetArgs = { colors: OTHER, backdrop: { color: 'surface-0' } }
+    const out = layerTint(base, name)
+    expect(out.backdrop).toEqual(base.backdrop)
+    expect(out.colors?.label).toBe('Paper')
+    const changed = changedKeys(OTHER, out.colors as ThemeColors)
+    expect(changed.length > 0).toBe(true)
+    expect(changed.every(k => k.startsWith('role-accent-'))).toBe(true)
+    expect(Object.keys(out.colors?.inputs.light ?? {}).length).toBe(Object.keys(OTHER.inputs.light ?? {}).length)
+  }
+})
+
+test('a one-mode theme stays one-mode; a backdrop alone gets the full wash', async () => {
+  const dark = makeColors({ label: 'Night', only: 'dark', dark: { gray: { anchors: { 'surface-0': '#101418', 'text-primary': '#e8ecf0' } } } }).theme
+  const out = layerTint({ colors: dark }, 'atlas')
+  expect(out.colors?.inputs.light).toBe(undefined)
+  expect(out.colors?.inputs.dark !== undefined).toBe(true)
+
+  const scene = layerTint({ backdrop: { scene: 'tide' } }, 'atlas')
+  expect(scene.backdrop).toEqual({ scene: 'tide' })
+  expect(scene.colors?.label).toBe('Factory: atlas')
+})
+
+test('a theme the tint cannot fit comes back untouched', async () => {
+  const odd: ThemeSetArgs = { colors: { v: 1, label: 'Odd', inputs: { light: { 'gray-0': '#zzzzzz' } as never } } }
+  expect(layerTint(odd, 'atlas')).toEqual(odd)
+  expect(isUnpaintable(["Desktop won't paint this theme: x"])).toBe(true)
+})
+
 // ── The engine, with an in-memory ledger ────────────────────────────────────
 
-type World = { files: Map<string, string>; notes: string[]; toasts: string[]; themes: string[]; store: Map<string, unknown> }
+/**
+ * Stands in for the app beneath the plugins, recording each look that reaches it.
+ * From engine 2.1.321 `$.theme` is core and a test answers its events; older test
+ * kits have no `$.theme`, so one is also added for them (the newer kit skips that).
+ */
+function themes(on: On, record: (look: ThemeSetArgs | 'cleared') => void): void {
+  on('theme.set', (_, e) => (record(e), { value: { isDrawn: true, requestId: 'theme' } }))
+  on('theme.clear', () => (record('cleared'), { value: { isDrawn: false, reason: 'cleared' } }))
+  on('engine.create', async (_, e, next) => ({
+    ...(await next(e)),
+    theme: {
+      set: async (look: ThemeSetArgs) => (record(look), { isDrawn: true as const, requestId: 'theme' }),
+      clear: async () => (record('cleared'), { isDrawn: false as const, reason: 'cleared' }),
+    },
+  }))
+}
+
+type World = { files: Map<string, string>; notes: string[]; toasts: string[]; themes: (ThemeSetArgs | 'cleared')[]; store: Map<string, unknown> }
 
 function world(on: On, id = 'me', cwd = '/code/atlas', isCommandRefused = false): World {
   const w: World = { files: new Map(), notes: [], toasts: [], themes: [], store: new Map() }
@@ -147,6 +218,7 @@ function world(on: On, id = 'me', cwd = '/code/atlas', isCommandRefused = false)
   on('ui.notify', (_, e) => (w.notes.push(`${e.title ?? ''}|${e.text}`), { value: { isSent: true, channel: 'client' } }))
   on('ui.toast', (_, e) => (w.toasts.push(e.text), { value: undefined }))
   on('ui.open', () => ({ value: { isPlaced: true } }))
+  themes(on, look => w.themes.push(look))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   on('turn.start', (_, e) => ({ turnId: e.turnId }))
   on('turn.complete', (_, e) => ({ text: e.answer }))
@@ -332,11 +404,59 @@ test('the task never shows the app\'s injected blocks or their ids', async () =>
 })
 
 test('a session that finished long ago settles into idle instead of needing you', async () => {
-  const base = { project: 'p', branch: 'main', task: 't', cwd: '/p', startedAt: 0, heartbeatAt: NOW, cost: 0, context: 0 }
-  const fresh = { ...base, id: 'fresh', state: 'waiting', since: NOW - 5 * 60_000 } as Entry
-  const old = { ...base, id: 'old', state: 'waiting', since: NOW - 23 * 3_600_000 } as Entry
-  const failed = { ...base, id: 'failed', state: 'failed', since: NOW - 23 * 3_600_000 } as Entry
+  const base = { project: 'p', branch: 'main', task: 't', startedAt: 0, heartbeatAt: NOW, cost: 0, context: 0 }
+  const fresh = entry({ ...base, id: 'fresh', state: 'waiting', since: NOW - 5 * 60_000 })
+  const old = entry({ ...base, id: 'old', state: 'waiting', since: NOW - 23 * 3_600_000 })
+  const failed = entry({ ...base, id: 'failed', state: 'failed', since: NOW - 23 * 3_600_000 })
   const live = liveEntries([fresh, old, failed], NOW)
   expect(needsYou(live).map(e => e.id)).toEqual(['failed', 'fresh'])
   expect(live.find(e => e.id === 'old')?.state).toBe('idle')
+})
+
+/**
+ * Another theme plugin set its look earlier in the session, so Factory holds it
+ * as the base. (The test kit gives no hook a `$.theme` to play that plugin with,
+ * so the remembered base is seeded the way the engine would hand it back.)
+ */
+function chose(on: On, look: ThemeSetArgs): void {
+  let stored: unknown = { shape: 'theme-1', value: look }
+  let version = 1
+  on('state.get', async (_, e, next) =>
+    e.plugin === 'factory' && e.key === 'baseTheme' ? { value: { value: stored, version } } : next(e),
+  )
+  on('state.set', async (_, e, next) => {
+    if (e.plugin === 'factory' && e.key === 'baseTheme') {
+      stored = e.value
+      version += 1
+      return { value: { isSet: true as const, version } }
+    }
+    return next(e)
+  })
+}
+
+test('another plugin\'s theme is tinted, not replaced; tint off hands it back', async ($, on) => {
+  const w = world(on)
+  const chosen: ThemeSetArgs = { colors: OTHER, backdrop: { color: 'surface-0' } }
+  chose(on, chosen)
+  await $.session.start(START)
+  const shown = w.themes.at(-1) as ThemeSetArgs
+  expect(shown.colors?.label).toBe('Paper')
+  expect(shown.backdrop).toEqual(chosen.backdrop)
+  const changed = changedKeys(OTHER, shown.colors as ThemeColors)
+  expect(changed.length > 0 && changed.every(k => k.startsWith('role-accent-'))).toBe(true)
+
+  await $.command.run(factory('tint off'))
+  expect(w.themes.at(-1)).toEqual(chosen)
+
+  await $.command.run(factory('tint on'))
+  const again = changedKeys(OTHER, (w.themes.at(-1) as ThemeSetArgs).colors as ThemeColors)
+  expect(again.length > 0 && again.every(k => k.startsWith('role-accent-'))).toBe(true)
+})
+
+test('with no other theme, tint on paints the project wash and tint off clears it', async ($, on) => {
+  const w = world(on)
+  await $.session.start(START)
+  expect((w.themes.at(-1) as ThemeSetArgs).colors?.label).toBe('Factory: atlas')
+  await $.command.run(factory('tint off'))
+  expect(w.themes.at(-1)).toBe('cleared')
 })

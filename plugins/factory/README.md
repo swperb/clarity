@@ -26,8 +26,15 @@ never one per session: only one session, the "foreman", sends it.
 
 **Project tint.** Each project gets its own accent color, worked out from its folder
 name, so you can tell at a glance which window belongs to which project. The same
-color marks the project on the floor. The tint touches the accent and washes the
-grays very lightly; added and removed lines keep the app's standard green and red.
+color marks the project on the floor. Added and removed lines keep the app's standard
+green and red.
+
+The tint works with whatever theme you use. With a theme plugin installed (Clarity's or
+anyone else's), Factory lays the project's accent over that theme and keeps its surfaces,
+text, status colors, backdrop and diff colors. The accent is refitted to the theme's own
+grays so it stays readable. If the theme can't take the accent without losing contrast,
+your theme shows as it is. With no theme plugin, the tint washes the app's grays lightly
+in the project's hue as well.
 
 **Collision radar.** Factory remembers which files each session edits. When another
 live session in the same repository (worktrees included) has edited a file this session
@@ -60,7 +67,7 @@ ago, are deleted the next time a session starts. Nothing leaves your machine.
 - Only sessions running Factory appear on the floor.
 - The floor's cost and context figures are a one-line summary per session. For what they mean and what is filling a session's context, open that session's **Session usage** pane from [Workbench](../workbench) (`/usage-info`).
 - "Waiting on you" means the turn ended. A session paused on a permission prompt still shows as working.
-- The tint replaces any other color theme (Clarity included) for as long as it's on. Run `/factory tint off` to keep your theme.
+- `/factory tint off` puts your theme back exactly as it was. With no theme plugin, it returns the app's own look.
 - Edits are the ones Claude makes with its file tools. Changes made by shell commands aren't tracked.
 - Cost "today" adds up every session that was alive at some point today, including ones that started yesterday.
 
