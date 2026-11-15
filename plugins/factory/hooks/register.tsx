@@ -362,15 +362,17 @@ export const register: Register = on => {
   // ── 1. The heartbeat ledger ───────────────────────────────────────────────
 
   on('prompt.submit', async ($, e, next) => {
-    if (e.command === undefined && e.isMeta !== true && e.text.trim() !== '') {
-      await touch($, { task: taskLine(e.text) }).catch(() => undefined)
+    const task = e.command === undefined && e.isMeta !== true ? taskLine(e.text) : ''
+    if (task !== '') {
+      await touch($, { task }).catch(() => undefined)
     }
     return next(e)
   })
 
   on('turn.start', async ($, e, next) => {
     if (e.agentId === undefined) {
-      const patch: Partial<Entry> = e.text.trim() !== '' ? { task: taskLine(e.text) } : {}
+      const task = taskLine(e.text)
+      const patch: Partial<Entry> = task !== '' ? { task } : {}
       await setState($, 'working', patch).catch(() => undefined)
     }
     return next(e)

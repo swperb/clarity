@@ -1,6 +1,6 @@
 {
   "name": "factory",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A control room for many Claude Desktop sessions across many projects: a shared heartbeat, a factory-floor pane, a needs-you queue with one batched notification, a per-project color tint and a collision radar.",
   "author": {
     "name": "swperb",

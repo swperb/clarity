@@ -49,9 +49,18 @@ export function parseEntry(text: string): Entry | undefined {
   }
 }
 
-/** Entries that are neither ended nor silent for over ten minutes. */
+/** How long a finished turn counts as "needs you" before the session reads as idle. */
+export const READY_MS = 30 * 60_000
+
+/**
+ * Entries that are neither ended nor silent for over ten minutes. A session
+ * that finished its turn more than half an hour ago settles into idle, so the
+ * needs-you queue holds what's fresh or failed, not every session left open.
+ */
 export function liveEntries(entries: readonly Entry[], now: number): Entry[] {
-  return entries.filter(e => e.state !== 'ended' && now - e.heartbeatAt <= STALE_MS)
+  return entries
+    .filter(e => e.state !== 'ended' && now - e.heartbeatAt <= STALE_MS)
+    .map(e => (e.state === 'waiting' && now - e.since > READY_MS ? { ...e, state: 'idle' as const } : e))
 }
 
 /** Waiting on you or failed, longest wait first. */
@@ -160,8 +169,22 @@ export function placeOf(cwd: string, gitOutput: string | undefined): Place {
 }
 
 /** The first line of a prompt, trimmed to fit a card. */
+// Blocks the app wraps around what reaches a session: reminders, messages
+// from other sessions, task notices, command echoes. They aren't what the
+// person typed, and they carry internal ids, so they never become the task.
+const INJECTED = /<(system-reminder|cross-session-message|task-notification|local-command-caveat|local-command-stdout|local-command-stderr|command-name|command-message|command-args|user-prompt-submit-hook|side-sessions-event|ci-monitor-event|pasted_content)\b[^>]*>[\s\S]*?(<\/\1>|$)/g
+
+/**
+ * The first line of what the person typed, shortened, with the app's injected
+ * blocks removed. A message from another session reads as such; text that is
+ * only injected blocks gives '' (keep the previous task).
+ */
 export function taskLine(text: string): string {
-  const line = text.split('\n').find(l => l.trim() !== '')?.trim() ?? ''
+  const typed = text.replace(INJECTED, '').replace(/<\/?[a-z][\w-]*(\s[^>]*)?>/g, '')
+  const line = typed.split('\n').find(l => l.trim() !== '')?.trim() ?? ''
+  if (line === '' && /<cross-session-message\b/.test(text)) {
+    return 'Message from another session'
+  }
   return line.length > 120 ? `${line.slice(0, 119)}…` : line
 }
 

@@ -318,3 +318,25 @@ test('a value an earlier version stored is declined', async ($, on) => {
   expect((await ui.find({ type: 'Text', text: /floor is quiet/ })) !== undefined).toBe(true)
   await ui.unmount()
 })
+
+test('the task never shows the app\'s injected blocks or their ids', async () => {
+  // The exact shapes that leaked into the floor during a live take.
+  expect(taskLine('<system-reminder>\nLinked sessions now: a = local_123 (idle)\n</system-reminder>\n\nRun git push --force origin main'))
+    .toBe('Run git push --force origin main')
+  expect(taskLine('<system-reminder>\nLinked sessions now: a = local_123\n</system-reminder>')).toBe('')
+  const relayed = '<cross-session-message from="local_f86c0397-299c" from-name="Some other session">\nPlease rebase.\n</cross-session-message>'
+  expect(taskLine(relayed)).toBe('Message from another session')
+  expect(taskLine(relayed)).not.toContain('local_')
+  expect(taskLine('<local-command-caveat>Caveat</local-command-caveat>\n<command-name>/factory</command-name>')).toBe('')
+  expect(taskLine('Add discount codes to the cart')).toBe('Add discount codes to the cart')
+})
+
+test('a session that finished long ago settles into idle instead of needing you', async () => {
+  const base = { project: 'p', branch: 'main', task: 't', cwd: '/p', startedAt: 0, heartbeatAt: NOW, cost: 0, context: 0 }
+  const fresh = { ...base, id: 'fresh', state: 'waiting', since: NOW - 5 * 60_000 } as Entry
+  const old = { ...base, id: 'old', state: 'waiting', since: NOW - 23 * 3_600_000 } as Entry
+  const failed = { ...base, id: 'failed', state: 'failed', since: NOW - 23 * 3_600_000 } as Entry
+  const live = liveEntries([fresh, old, failed], NOW)
+  expect(needsYou(live).map(e => e.id)).toEqual(['failed', 'fresh'])
+  expect(live.find(e => e.id === 'old')?.state).toBe('idle')
+})

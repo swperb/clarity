@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.3 (2026-11-15)
+
+- **Factory no longer shows the app's internal text.** A session's task line could show
+  wrapper blocks the app adds to a conversation (reminders, messages relayed from other
+  sessions, with their internal ids). It now shows only what you typed; a relayed
+  message reads "Message from another session".
+- **Factory's "needs you" stays meaningful.** A session that finished its turn counts as
+  needing you for 30 minutes, then settles into idle; failed sessions always count.
+- Clarity is presented as made for **Claude Desktop**, with the in-app install route.
+- A new launch video and screenshots, filmed live with 1.0.2's working guard.
+
 ## 1.0.2 (2026-11-15)
 
 - **Workbench's risky-command guard now actually stops risky commands.** In 1.0.0 and
