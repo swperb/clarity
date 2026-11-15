@@ -487,7 +487,7 @@ export const register: Register = on => {
         <Box flexDirection="column" rowGap={1}>
           <Text dimColor>The floor is quiet.</Text>
           <Text dimColor size="footnote">
-            Every Claude Code session with the factory plugin shows up here, grouped by project.
+            Every Claude Desktop session with Factory shows up here, grouped by project.
           </Text>
         </Box>
       )

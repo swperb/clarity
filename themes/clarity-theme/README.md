@@ -1,10 +1,10 @@
 # Clarity theme
 
-A theme for Claude Code Desktop that's built to make long working sessions easier.
+A theme for Claude Desktop that's built to make long working sessions easier.
 
-```
-/plugin install clarity-theme --marketplace swperb/clarity
-```
+Install with the rest of Clarity (`npx github:swperb/clarity`), or on its own in
+Claude Desktop: click **+** next to the prompt box → **Plugins** → **Add marketplace**
+`swperb/clarity` → add **clarity-theme**.
 
 ## What it does for you
 
@@ -35,7 +35,7 @@ A theme for Claude Code Desktop that's built to make long working sessions easie
 The app derives each role's full scale from these seeds, tuning lightness per mode.
 Diff and git colors are left as the app's own.
 
-Applies to the desktop and mobile apps; terminals and editors keep their own colors.
+Made for Claude Desktop.
 
 ## License
 

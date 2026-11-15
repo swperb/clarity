@@ -1,12 +1,12 @@
 # Workbench
 
-Quiet productivity for Claude Code. Workbench stays out of the way until something
+Quiet productivity for Claude Desktop. Workbench stays out of the way until something
 needs you, then says so plainly. It pairs with the [Clarity](../../themes/clarity) theme
 but works with any theme.
 
-```
-/plugin install workbench --marketplace swperb/clarity
-```
+Install with the rest of Clarity (`npx github:swperb/clarity`), or on its own in
+Claude Desktop: click **+** next to the prompt box → **Plugins** → **Add marketplace**
+`swperb/clarity` → add **workbench**.
 
 ## What you get
 
@@ -58,7 +58,7 @@ usage figures, off by default because a status line can't be clicked).
 
 ## Notes
 
-- The band and panes draw in the desktop app and in the terminal.
+- Made for Claude Desktop.
 - The guard adds a question; it never removes one. If your settings already deny a command, it stays denied.
 - Changed files and test runs are tracked from Claude's built-in tools **and** from other MCP servers' file and
   test tools (any tool taking a `path` with `old_string`/`new_string` or `content`, or a `run_checks`-style test tool).

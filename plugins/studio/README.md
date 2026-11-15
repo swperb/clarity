@@ -5,9 +5,9 @@ follows what Claude is doing, live: the file it's reading, the change it just ma
 the search it ran, the command and whether it passed. It never edits anything
 itself, and it stays quiet: no toasts, no sounds, the app's own diff colors.
 
-```
-/plugin install studio --marketplace swperb/clarity
-```
+Install with the rest of Clarity (`npx github:swperb/clarity`), or on its own in
+Claude Desktop: click **+** next to the prompt box → **Plugins** → **Add marketplace**
+`swperb/clarity` → add **studio**.
 
 ## What you get
 
@@ -47,10 +47,8 @@ desktop app it's one glance line: `Editing src/cart.js +5 −0`.
 
 ## Opening it
 
-`/studio` opens it anywhere. In the desktop app, and in a fullscreen terminal where
-panes dock beside the chat, Studio also opens itself the first time Claude touches a
-file. It never opens itself on a terminal's main screen, where a pane would cover the
-chat. Close it and it stays closed until you run `/studio` again.
+`/studio` opens it. Studio also opens itself beside the chat the first time Claude
+touches a file. Close it and it stays closed until you run `/studio` again.
 
 ```
 /studio              # open the pane
@@ -60,7 +58,7 @@ chat. Close it and it stays closed until you run `/studio` again.
 
 ## Notes
 
-- Studio reads files only to show them, through Claude Code's own file API, and only when you click.
+- Studio reads files only to show them, through Claude Desktop's own file access, and only when you click.
 - Edit counts come from Claude's file tools. Changes made by shell commands aren't counted, though the tree refreshes after every turn so new files show.
 - Large files show their first 1,500 lines; binary files and files over 2 MB aren't shown.
 - Studio is about where Claude is *now*. For the full list of files changed this session, use

@@ -8,7 +8,7 @@
     {
       "name": "clarity-theme",
       "source": "./themes/clarity-theme",
-      "description": "A calm, high-legibility theme for Claude Code Desktop: colorblind-safe status colors, strong focus rings, easy on the eyes for long sessions."
+      "description": "A calm, high-legibility theme for Claude Desktop: colorblind-safe status colors, strong focus rings, easy on the eyes for long sessions."
     },
     {
       "name": "workbench",
@@ -26,5 +26,5 @@
       "description": "A soft IDE beside the chat: the session folder's file tree, a live viewer that follows what Claude reads, edits, searches and runs, and an activity strip."
     }
   ],
-  "description": "Clarity for Claude Code: a calm, high-legibility theme plus plugins for attention, safety, multi-session control and a live IDE pane."
+  "description": "Clarity for Claude Desktop: a calm, high-legibility theme plus plugins for attention, safety, multi-session control and a live IDE pane."
 }

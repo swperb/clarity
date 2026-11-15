@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Installs the suite's plugins into Claude Code, all at once or a la carte.
+// Installs Clarity's plugins for Claude Desktop, all at once or a la carte.
 // Zero dependencies: it drives the `claude plugin` CLI you already have.
 import { spawnSync } from 'node:child_process'
 import { dirname, join } from 'node:path'
@@ -39,7 +39,8 @@ function claude(args, { quiet = false } = {}) {
     ? spawnSync([CLAUDE, ...args].map(cmdQuote).join(' '), { ...options, shell: true })
     : spawnSync(CLAUDE, args, options)
   if (run.error) {
-    throw new Error(`Couldn't run \`${CLAUDE}\`. Is Claude Code installed and on your PATH? (${run.error.message})`)
+    throw new Error(`Couldn't run \`${CLAUDE}\`, which the installer uses to install plugins (${run.error.message}).\n` +
+      `Install from inside Claude Desktop instead: click + next to the prompt box → Plugins → Add marketplace → ${SOURCE}.`)
   }
   return run
 }
@@ -180,7 +181,7 @@ async function lifecycle(args, catalog, state) {
       console.log(`${red('✗')} ${label}\n${dim((run.stderr || run.stdout).trim())}`)
     }
   }
-  console.log(failed === 0 ? `\n${green('Done.')} Start a new Claude Code session to load the changes.` : `\n${red(`${failed} step(s) failed.`)}`)
+  console.log(failed === 0 ? `\n${green('Done.')} Start a new session in Claude Desktop to load the changes.` : `\n${red(`${failed} step(s) failed.`)}`)
   process.exit(failed === 0 ? 0 : 1)
 }
 
@@ -293,7 +294,7 @@ async function main() {
 
   console.log(
     failed === 0
-      ? `\n${green('Done.')} Start a new Claude Code session to load the changes.\nChange your picks any time: ${accent(`npx github:${SOURCE} config`)}`
+      ? `\n${green('Done.')} Start a new session in Claude Desktop to load the changes.\nChange your picks any time: ${accent(`npx github:${SOURCE} config`)}`
       : `\n${red(`${failed} step(s) failed.`)} Nothing else was changed.`,
   )
   process.exit(failed === 0 ? 0 : 1)

@@ -1,12 +1,12 @@
 # Clarity
 
-**Clarity for Claude Code**: a theme and three plugins, built for getting work done.
+**Clarity for Claude Desktop**: a theme and three plugins, built for getting work done.
 Legible text, status colors you can't misread, surfaces that stay calm over a long
 session, and tools that stay quiet until something needs you.
 
 [![Watch the 33-second tour](docs/poster.png)](docs/clarity-launch.mp4)
 
-<sub>▶ [Watch the 33-second tour](docs/clarity-launch.mp4): real footage of a Claude Code session with Clarity installed.</sub>
+<sub>▶ [Watch the 33-second tour](docs/clarity-launch.mp4): real footage of a Claude Desktop session with Clarity installed.</sub>
 
 | A test fails | Every file Claude touched | Green, and what's left to commit |
 | --- | --- | --- |
@@ -20,7 +20,7 @@ npx github:swperb/clarity
 
 A picker opens with everything checked. Press Enter to install it all, or uncheck what you
 don't want first (↑/↓ or j/k move, space toggles, `a` all, `n` none). Then start a new
-Claude Code session.
+session in Claude Desktop.
 
 **Change your picks later** with the same picker. It shows what's installed; unchecking
 disables a plugin (its data is kept), checking turns it back on:
@@ -55,9 +55,10 @@ npx github:swperb/clarity update
 npx github:swperb/clarity uninstall
 ```
 
-**Requirements:** an up-to-date Claude Code (the desktop app or the CLI) and
-Node 18+ for the installer. The installer has no dependencies and only runs
-`claude plugin …` commands you could run yourself.
+**Requirements:** Clarity is made for **Claude Desktop** (the Code tab), kept up to date.
+The one-command installer also needs Node 18+ and the `claude` command on your PATH,
+which it uses to install the plugins; it has no dependencies of its own. No `claude`
+command? Use the in-app route below.
 
 ## What's in the suite
 
@@ -84,24 +85,9 @@ Clarity makes **no network requests**. Everything stays on your machine:
 
 ## Install one at a time
 
-At the prompt of a Claude Code terminal session:
-
-```
-/plugin install clarity-theme --marketplace swperb/clarity
-```
-
-Answer `y` to add the marketplace, then pick a scope (user scope applies it everywhere).
-
-From a shell:
-
-```bash
-claude plugin install workbench --marketplace swperb/clarity
-```
-
-In the desktop app: click **+** next to the prompt box → **Plugins** → **Add marketplace**
-with `swperb/clarity` → **Add plugin**.
-
-Themes apply to the desktop and mobile apps; terminals and editors keep their own colors.
+In Claude Desktop, click **+** next to the prompt box → **Plugins** → **Add marketplace**
+and enter `swperb/clarity`. Then add the plugins you want: `clarity-theme`, `workbench`,
+`factory`, `studio`. Start a new session to load them.
 
 ## What every theme here must do
 

@@ -23,7 +23,7 @@
 
 ## 1.0.0 (2026-11-14)
 
-First public release of Clarity for Claude Code.
+First public release of Clarity for Claude Desktop.
 
 **Install everything:** `npx github:swperb/clarity` opens a picker with every theme and
 plugin checked. `config` changes your picks later, `update` brings everything up to date,

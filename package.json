@@ -1,7 +1,7 @@
 {
   "name": "clarity",
   "version": "1.0.2",
-  "description": "Clarity for Claude Code: a theme and plugins that make long sessions calmer and more productive. One-command installer.",
+  "description": "Clarity for Claude Desktop: a theme and plugins that make long sessions calmer and more productive. One-command installer.",
   "type": "module",
   "bin": {
     "clarity": "installer/cli.mjs"

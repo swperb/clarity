@@ -1,13 +1,13 @@
 # Factory
 
-One control room for many Claude Code sessions. Run five sessions across three
+One control room for many Claude Desktop sessions. Run five sessions across three
 projects and Factory shows you, from any one of them, which are working, which are
 waiting on you, what each costs, and when two of them are about to edit the same file.
 It stays quiet until something needs you.
 
-```
-/plugin install factory --marketplace swperb/clarity
-```
+Install with the rest of Clarity (`npx github:swperb/clarity`), or on its own in
+Claude Desktop: click **+** next to the prompt box → **Plugins** → **Add marketplace**
+`swperb/clarity` → add **factory**.
 
 Install it at the user scope so every session joins the floor.
 
@@ -28,7 +28,6 @@ never one per session: only one session, the "foreman", sends it.
 name, so you can tell at a glance which window belongs to which project. The same
 color marks the project on the floor. The tint touches the accent and washes the
 grays very lightly; added and removed lines keep the app's standard green and red.
-Desktop and mobile apps only; terminals keep their own colors.
 
 **Collision radar.** Factory remembers which files each session edits. When another
 live session in the same repository (worktrees included) has edited a file this session
