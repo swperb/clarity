@@ -55,6 +55,8 @@ npx github:swperb/clarity update
 npx github:swperb/clarity uninstall
 ```
 
+**Platforms:** **macOS** and **Windows**. Linux is [on the roadmap](#roadmap).
+
 **Requirements:** Clarity is made for **Claude Desktop** (the Code tab), kept up to date.
 The one-command installer also needs Node 18+ and the `claude` command on your PATH,
 which it uses to install the plugins; it has no dependencies of its own. No `claude`
@@ -88,6 +90,10 @@ Clarity makes **no network requests**. Everything stays on your machine:
 In Claude Desktop, click **+** next to the prompt box → **Plugins** → **Add marketplace**
 and enter `swperb/clarity`. Then add the plugins you want: `clarity-theme`, `workbench`,
 `factory`, `studio`. Start a new session to load them.
+
+## Roadmap
+
+- **Linux.** Clarity works on macOS and Windows today; Linux support is planned.
 
 ## What every theme here must do
 
