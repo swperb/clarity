@@ -18,7 +18,8 @@ session, and tools that stay quiet until something needs you.
 npx github:swperb/clarity
 ```
 
-A picker opens with everything checked. Press Enter to install it all, or uncheck what you
+A picker opens with every plugin and the Clarity theme checked (pick Neon Noir instead
+if you like; only one theme paints). Press Enter to install, or uncheck what you
 don't want first (↑/↓ or j/k move, space toggles, `a` all, `n` none). Then start a new
 session in Claude Desktop.
 
@@ -67,11 +68,25 @@ command? Use the in-app route below.
 | | | What it's for |
 | --- | --- | --- |
 | <img src="themes/clarity-theme/.claude-plugin/icon.png" width="56" alt=""> | [**Clarity theme**](themes/clarity-theme) | High legibility, colorblind-safe status colors, standard diff colors, strong keyboard focus rings. Light and dark. |
+| <img src="themes/neon-noir/.claude-plugin/icon.png" width="56" alt=""> | [**Neon Noir**](themes/neon-noir) | A night city in the rain: blue-black surfaces, electric cyan and hot magenta accents, a quiet animated skyline along the top of the window. The same readability rules as Clarity's theme. Dark and light. |
 | <img src="plugins/workbench/.claude-plugin/icon.png" width="56" alt=""> | [**Workbench**](plugins/workbench) | An attention band for failing tests, uncommitted work and a filling context window; a guard that asks before hard-to-undo commands; a changed-files pane; a usage chip that explains time, cost and context when clicked. |
 | <img src="plugins/factory/.claude-plugin/icon.png" width="56" alt=""> | [**Factory**](plugins/factory) | One control room for many sessions across many projects: a factory-floor pane, a needs-you queue with one batched notification, a per-project color tint, and a radar for two sessions editing the same file. |
 | <img src="plugins/studio/.claude-plugin/icon.png" width="56" alt=""> | [**Studio**](plugins/studio) | A soft IDE beside the chat: the session folder's file tree and a live viewer that follows what Claude reads, edits, searches and runs, with an activity strip. |
 
 Each plugin also has its own in-session settings, for example `/workbench guard off` or `/studio auto off`.
+
+## Works with any theme
+
+Prefer someone else's theme? Install it next to Clarity's plugins and they adapt to it:
+
+- **Workbench, Factory and Studio** draw with the app's meaning-based colors (success,
+  error, warning, diff green and red), so they take whatever colors your theme gives
+  those meanings.
+- **Factory's project tint** is laid over your theme and changes only its accent. Your
+  surfaces, text, backdrop and diff colors stay as they are, and `/factory tint off`
+  restores your theme exactly.
+- **The Clarity theme** steps aside when another theme plugin is installed, so the two
+  never take turns replacing each other.
 
 ## Privacy
 
@@ -83,12 +98,12 @@ Clarity makes **no network requests**. Everything stays on your machine:
   (project folder, branch, state, the first line of your latest prompt, cost and context
   use) so its pane can show all your sessions, and removes files for sessions that have
   ended. It raises local notifications only.
-- The **theme** only sets colors.
+- The **themes** only set colors (and Neon Noir draws its backdrop scene).
 
 ## Install one at a time
 
 In Claude Desktop, click **+** next to the prompt box → **Plugins** → **Add marketplace**
-and enter `swperb/clarity`. Then add the plugins you want: `clarity-theme`, `workbench`,
+and enter `swperb/clarity`. Then add the plugins you want: `clarity-theme` or `neon-noir`, `workbench`,
 `factory`, `studio`. Start a new session to load them.
 
 ## Roadmap

@@ -1,0 +1,22 @@
+{
+  "name": "neon-noir",
+  "version": "1.0.3",
+  "engines": {
+    "claude-code": ">=2.1.321"
+  },
+  "description": "A neon-noir theme for Claude Desktop: blue-black night surfaces, electric cyan and hot magenta accents, and a quiet skyline in the rain behind the chat. Light and dark.",
+  "author": {
+    "name": "swperb",
+    "url": "https://github.com/swperb"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/swperb/clarity",
+  "homepage": "https://github.com/swperb/clarity#readme",
+  "icon": "./.claude-plugin/icon.png",
+  "keywords": [
+    "clarity",
+    "theme",
+    "neon",
+    "dark"
+  ]
+}
