@@ -14,6 +14,7 @@ import {
   parseEntry,
   placeOf,
   prunable,
+  readClarityInstall,
   taskLine,
   tintFor,
 } from '../hooks/lib'
@@ -460,4 +461,117 @@ test('with no other theme, tint on paints the project wash and tint off clears i
   expect((w.themes.at(-1) as ThemeSetArgs).colors?.label).toBe('Factory: atlas')
   await $.command.run(factory('tint off'))
   expect(w.themes.at(-1)).toBe('cleared')
+})
+
+// ── Clarity updates ─────────────────────────────────────────────────────────
+
+const INSTALLED = '/home/me/.claude/plugins/installed_plugins.json'
+
+function installed(version: string, sha: string, extra: Record<string, unknown> = {}): string {
+  const one = (name: string) => [
+    { scope: 'user', installPath: `/home/me/.claude/plugins/cache/clarity/${name}/${version}`, version, gitCommitSha: sha },
+  ]
+  return JSON.stringify({
+    version: 2,
+    plugins: { 'clarity-theme@clarity': one('clarity-theme'), 'factory@clarity': one('factory'), ...extra },
+  })
+}
+
+test('the Clarity install is read from installed_plugins.json, other marketplaces ignored', async () => {
+  const a = readClarityInstall(installed('1.0.3', 'aaa'))
+  expect(a?.version).toBe('1.0.3')
+  // Same version, new commit: still new code on disk.
+  expect(readClarityInstall(installed('1.0.3', 'bbb'))?.signature === a?.signature).toBe(false)
+  // Another marketplace's plugin changing is not a Clarity update.
+  const other = installed('1.0.3', 'aaa', { 'tool@elsewhere': [{ version: '9.9.9', gitCommitSha: 'zzz' }] })
+  expect(readClarityInstall(other)?.signature).toBe(a?.signature)
+  expect(readClarityInstall(JSON.stringify({ version: 2, plugins: { 'tool@elsewhere': [] } }))).toBe(undefined)
+  expect(readClarityInstall('{"plugins":')).toBe(undefined)
+  expect(readClarityInstall('')).toBe(undefined)
+})
+
+const BAND = {
+  plugin: 'factory',
+  component: 'AbovePrompt',
+  surface: 'desktop',
+  props: { hasSurvey: false, isCollapsed: false, isWorking: false, maxRows: 10, bodyColumns: 80, scroll: { offset: 0, bodyRows: 10 }, view: {} },
+} as const
+
+function engineBand(on: On): string[] {
+  const fills: string[] = []
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine</Text>
+  })
+  on('prompt.fill', (_, e) => (fills.push(e.text), { isFilled: true }))
+  return fills
+}
+
+const ANSWER = { answer: 'done', durationMs: 5, isAborted: false, turnId: 't1', reason: 'answer' } as const
+
+test('a newer Clarity on disk offers /reload-plugins above the prompt', async ($, on) => {
+  const w = world(on)
+  const fills = engineBand(on)
+  w.files.set(INSTALLED, installed('1.0.3', 'aaa'))
+  await $.session.start(START)
+
+  // What this session loaded: nothing to offer.
+  let band = await $.ui.mount(BAND)
+  expect((await band.find({ type: 'Text', text: /is installed/ })) === undefined).toBe(true)
+  await band.unmount()
+
+  // An update lands while the session runs; the next turn's end sees it.
+  w.files.set(INSTALLED, installed('1.1.0', 'bbb'))
+  await $.turn.complete(ANSWER)
+  band = await $.ui.mount(BAND)
+  expect((await band.find({ type: 'Text', text: /Clarity 1\.1\.0 is installed/ })) !== undefined).toBe(true)
+  await band.press({ key: 'reload-clarity' })
+  expect(fills).toEqual(['/reload-plugins'])
+  expect(w.toasts.some(t => t.includes('Press Enter'))).toBe(true)
+
+  // "later" puts this update away; a further one shows again.
+  await band.press({ key: 'dismiss-update' })
+  expect((await band.find({ type: 'Text', text: /engine/ })) !== undefined).toBe(true)
+  await band.unmount()
+  w.files.set(INSTALLED, installed('1.1.1', 'ccc'))
+  await $.turn.complete(ANSWER)
+  band = await $.ui.mount(BAND)
+  expect((await band.find({ type: 'Text', text: /Clarity 1\.1\.1 is installed/ })) !== undefined).toBe(true)
+  await band.unmount()
+})
+
+test('/factory updates off hides the offer and stays off', async ($, on) => {
+  const w = world(on)
+  engineBand(on)
+  w.files.set(INSTALLED, installed('1.0.3', 'aaa'))
+  await $.session.start(START)
+  w.files.set(INSTALLED, installed('1.1.0', 'bbb'))
+  await $.turn.complete(ANSWER)
+
+  const reply = await $.command.run(factory('updates off'))
+  expect(reply.text).toContain('updates is off')
+  expect((w.store.get('features') as { updates: boolean }).updates).toBe(false)
+  const band = await $.ui.mount(BAND)
+  expect((await band.find({ type: 'Text', text: /is installed/ })) === undefined).toBe(true)
+  await band.unmount()
+
+  const list = await $.command.run(factory('settings'))
+  expect(list.text).toContain('○ updates')
+})
+
+test('the update row and the collision radar share the band', async ($, on) => {
+  const w = world(on)
+  engineBand(on)
+  on('tool.call', () => ({ result: {} }))
+  w.files.set(INSTALLED, installed('1.0.3', 'aaa'))
+  seed(w, entry({ id: 'twin', repo: '/code/atlas/.git', branch: 'feature', files: ['src/auth.ts'] }))
+  await $.session.start(START)
+  await $.tool.call({ tool: 'Edit', file_path: '/code/atlas/src/auth.ts', old_string: 'a', new_string: 'b' })
+  w.files.set(INSTALLED, installed('1.1.0', 'bbb'))
+  await $.turn.complete(ANSWER)
+
+  const band = await $.ui.mount(BAND)
+  expect((await band.find({ type: 'Text', text: /Clarity 1\.1\.0 is installed/ })) !== undefined).toBe(true)
+  expect((await band.find({ type: 'Text', text: /also edited by another session/ })) !== undefined).toBe(true)
+  await band.unmount()
 })

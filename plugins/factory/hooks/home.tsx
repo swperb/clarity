@@ -42,7 +42,7 @@ const SEEN_THROTTLE_MS = 15_000
 const MIN = 60_000
 
 // The same state Factory's floor keeps (same keys, same shapes): read here, written there.
-const features = atom({ plugin: 'factory', key: 'features' } as const, { ledger: true, notify: true, tint: true, radar: true, home: true })
+const features = atom({ plugin: 'factory', key: 'features' } as const, { ledger: true, notify: true, tint: true, radar: true, home: true, updates: true })
 const self = atom({ plugin: 'factory', key: 'self' } as const, null, { shape: 'entry-2' })
 const floor = atom({ plugin: 'factory', key: 'floor' } as const, [], { shape: 'floor-2' })
 

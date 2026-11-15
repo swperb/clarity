@@ -1,4 +1,4 @@
-export type Feature = 'ledger' | 'notify' | 'tint' | 'radar' | 'home'
+export type Feature = 'ledger' | 'notify' | 'tint' | 'radar' | 'home' | 'updates'
 
 export type Features = Record<Feature, boolean>
 
@@ -108,6 +108,15 @@ export type BaseTheme = {
 /** Where this session sits, worked out once at start. */
 export type Place = { project: string; repo: string; root: string; branch: string | null }
 
+/**
+ * A Clarity install newer than (or different from) the one this session loaded.
+ * `signature` names every `@clarity` entry in `installed_plugins.json`.
+ */
+export type PendingUpdate = { version: string | null; signature: string }
+
+/** The install a module of Factory loaded from; `token` names that load of the module. */
+export type LoadedFrom = { token: string; signature: string }
+
 /** Another session in the same repo that edited a file this one edited. */
 export type Collision = { file: string; otherId: string; otherBranch: string | null; otherTask: string }
 
@@ -129,6 +138,9 @@ declare module 'claude-code' {
       homeOpenedFor: number | null
       homeView: 'away' | 'today'
       baseTheme: Shaped<BaseTheme | null>
+      pendingUpdate: Shaped<PendingUpdate | null>
+      updateDismissed: string | null
+      loadedFrom: Shaped<LoadedFrom | null>
     }
   }
 }

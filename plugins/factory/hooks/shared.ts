@@ -6,12 +6,22 @@ import { parseEntry } from './lib'
 
 // ── The ledger on disk ──────────────────────────────────────────────────────
 
-/** `~/.claude/factory`, or under `$CLAUDE_CONFIG_DIR` when set. */
-export async function factoryDir($: Engine): Promise<string> {
+/** `~/.claude`, or `$CLAUDE_CONFIG_DIR` when set. */
+export async function configDir($: Engine): Promise<string> {
   const config = await $.env.get('CLAUDE_CONFIG_DIR')
   const home = await $.env.get('HOME')
   const base = config !== undefined && config !== '' ? config : `${home ?? '~'}/.claude`
-  return `${base.replace(/\/+$/, '')}/factory`
+  return base.replace(/\/+$/, '')
+}
+
+/** `~/.claude/factory`, or under `$CLAUDE_CONFIG_DIR` when set. */
+export async function factoryDir($: Engine): Promise<string> {
+  return `${await configDir($)}/factory`
+}
+
+/** Where Claude Desktop records the plugins it installed, with their versions. */
+export async function installedPluginsFile($: Engine): Promise<string> {
+  return `${await configDir($)}/plugins/installed_plugins.json`
 }
 
 export async function ledgerDir($: Engine): Promise<string> {

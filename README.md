@@ -50,6 +50,13 @@ disabling it.
 npx github:swperb/clarity update
 ```
 
+You don't need to quit Claude Desktop or close your sessions. Sessions you open after the
+update start on the new version. In each session that's already open, Factory shows a
+quiet row above the prompt within a minute: `↻ Clarity 1.1.0 is installed`. Press
+**Reload** and then Enter, and that session runs `/reload-plugins` and switches to the new
+version. You can also type `/reload-plugins` yourself, or press **later** to hide the row
+until the next update.
+
 **Uninstall** every Clarity plugin and the marketplace:
 
 ```bash

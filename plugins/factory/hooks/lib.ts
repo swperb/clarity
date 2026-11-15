@@ -340,3 +340,46 @@ export function layerTint(base: ThemeSetArgs, project: string): ThemeSetArgs {
   const merged: ThemeColors = { ...colors, inputs }
   return isUnpaintable(checkColors(merged)) ? base : { ...base, colors: merged }
 }
+
+// ── Clarity updates ─────────────────────────────────────────────────────────
+
+/** The marketplace every Clarity theme and plugin is installed from. */
+export const CLARITY_MARKETPLACE = 'clarity'
+
+/**
+ * What `installed_plugins.json` says about Clarity: a signature naming every
+ * `<plugin>@clarity` entry's version, commit and folder (any change means new
+ * code on disk), and the version to show (Factory's, else the first one's).
+ * Undefined when the file is unreadable or holds no Clarity entry.
+ */
+export function readClarityInstall(text: string): { signature: string; version: string | null } | undefined {
+  let raw: unknown
+  try {
+    raw = JSON.parse(text)
+  } catch {
+    return undefined
+  }
+  const plugins = (raw as { plugins?: unknown } | null)?.plugins
+  if (plugins === null || typeof plugins !== 'object') {
+    return undefined
+  }
+  const suffix = `@${CLARITY_MARKETPLACE}`
+  const parts: string[] = []
+  let version: string | null = null
+  for (const [key, list] of Object.entries(plugins as Record<string, unknown>)) {
+    if (!key.endsWith(suffix) || !Array.isArray(list)) {
+      continue
+    }
+    for (const item of list as { version?: unknown; gitCommitSha?: unknown; installPath?: unknown }[]) {
+      if (item === null || typeof item !== 'object') {
+        continue
+      }
+      const v = typeof item.version === 'string' ? item.version : ''
+      parts.push(`${key} ${v} ${String(item.gitCommitSha ?? '')} ${String(item.installPath ?? '')}`)
+      if (v !== '' && (version === null || key === `factory${suffix}`)) {
+        version = v
+      }
+    }
+  }
+  return parts.length === 0 ? undefined : { signature: parts.sort().join('\n'), version }
+}
